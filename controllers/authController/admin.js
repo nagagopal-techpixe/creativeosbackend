@@ -548,26 +548,25 @@ export const toggleMusicDetailsSection = async (req, res) => {
 
 export const toggleMusicDetailsGroup = async (req, res) => {
   const { id, groupId } = req.params;
+
   try {
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const currentAllowed = user.permissions.musicBuilder.details.allowedGroups.map(String);
-    let newAllowed;
-    if (currentAllowed.length === 0) {
-      const mb = await MusicBuilder.findOne();
-      const all = mb.details.items.map(g => String(g._id));
-      newAllowed = all.filter(id => id !== groupId);
-    } else {
-      const isAllowed = currentAllowed.includes(groupId);
-      newAllowed = isAllowed
-        ? currentAllowed.filter(id => id !== groupId)
-        : [...currentAllowed, groupId];
-    }
+    const currentAllowed =
+      (user.permissions?.musicBuilder?.details?.allowedGroups ?? []).map(String);
+
+    const isAllowed = currentAllowed.includes(groupId);
+
+    const newAllowed = isAllowed
+      ? currentAllowed.filter((gid) => gid !== groupId)
+      : [...currentAllowed, groupId];
 
     user.permissions.musicBuilder.details.allowedGroups = newAllowed;
+
     user.markModified("permissions.musicBuilder.details.allowedGroups");
     await user.save();
+
     res.json({ allowedGroups: newAllowed });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -581,7 +580,8 @@ export const toggleMusicDetailsOpt = async (req, res) => {
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const allowedOpts = user.permissions.musicBuilder.details.allowedOpts ?? {};
+    const allowedOpts =
+  user.permissions?.musicBuilder?.details?.allowedOpts ?? {};
     const currentArr  = (allowedOpts[groupId] ?? []).map(String);
 
     const newArr = isActive
