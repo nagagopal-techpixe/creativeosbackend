@@ -1,9 +1,9 @@
 // routes/userRoutes.js
 import express from "express";
-import { getUserVideoBuilder } from "../controllers/userBuilderController.js";
+import { getmodulepermissions } from "../controllers/user/modules_data.js";
 import { protectUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-router.get("/video-builder", protectUser, getUserVideoBuilder);  // 👈 user's filtered view
+router.post("/video-builder", protectUser, getmodulepermissions);  // 👈 user's filtered view
 
 export default router;
