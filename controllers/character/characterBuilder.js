@@ -51,6 +51,10 @@ export const toggleTypeSection = async (req, res) => {
     const doc = await getCharacterBuilder(res); if (!doc) return;
     doc.types.isActive = !doc.types.isActive;
     await doc.save();
+    await User.updateMany(
+      {},
+      { $set: { "permissions.characterBuilder.types.isActive": doc.types.isActive } }
+    );
     res.status(200).json({ success: true, data: doc.types });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -82,6 +86,10 @@ export const toggleStyleSection = async (req, res) => {
     const doc = await getCharacterBuilder(res); if (!doc) return;
     doc.styles.isActive = !doc.styles.isActive;
     await doc.save();
+    await User.updateMany(
+      {},
+      { $set: { "permissions.characterBuilder.styles.isActive": doc.styles.isActive } }
+    );
     res.status(200).json({ success: true, data: doc.styles });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -113,6 +121,10 @@ export const togglePoseSection = async (req, res) => {
     const doc = await getCharacterBuilder(res); if (!doc) return;
     doc.poses.isActive = !doc.poses.isActive;
     await doc.save();
+    await User.updateMany(
+      {},
+      { $set: { "permissions.characterBuilder.poses.isActive": doc.poses.isActive } }
+    );
     res.status(200).json({ success: true, data: doc.poses });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -199,6 +211,10 @@ export const toggleDetailSection = async (req, res) => {
     const doc = await getCharacterBuilder(res); if (!doc) return;
     doc.details.isActive = !doc.details.isActive;
     await doc.save();
+    await User.updateMany(
+      {},
+      { $set: { "permissions.characterBuilder.details.isActive": doc.details.isActive } }
+    );
     res.status(200).json({ success: true, data: doc.details });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -216,6 +232,10 @@ export const togglePresetSection = async (req, res) => {
     const doc = await getCharacterBuilder(res); if (!doc) return;
     doc.presets.isActive = !doc.presets.isActive;
     await doc.save();
+    await User.updateMany(
+      {},
+      { $set: { "permissions.characterBuilder.presets.isActive": doc.presets.isActive } }
+    );
     res.status(200).json({ success: true, data: doc.presets });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
