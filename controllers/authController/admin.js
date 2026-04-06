@@ -255,15 +255,32 @@ export const toggleVideoSection = async (req, res) => {
 export const toggleVideoItem = async (req, res) => {
   const { id, section, itemId } = req.params;
   const { isActive } = req.body;
+  
+  // Debug logging to identify the issue
+  console.log('toggleVideoItem called with:', {
+    id,
+    section,
+    itemId,
+    isActive,
+    params: req.params,
+    body: req.body
+  });
+  
   try {
     const update = isActive
       ? { $addToSet: { [`permissions.videoBuilder.${section}.allowedItems`]: itemId } }
       : { $pull:     { [`permissions.videoBuilder.${section}.allowedItems`]: itemId } };
 
+    console.log('MongoDB update operation:', update);
+
     const user = await User.findByIdAndUpdate(id, update, { new: true });
     if (!user) return res.status(404).json({ message: "User not found" });
+    
+    console.log('Updated allowedItems:', user.permissions.videoBuilder[section].allowedItems);
+    
     res.json({ allowedItems: user.permissions.videoBuilder[section].allowedItems });
   } catch (error) {
+    console.error('Error in toggleVideoItem:', error);
     res.status(500).json({ message: error.message });
   }
 };
