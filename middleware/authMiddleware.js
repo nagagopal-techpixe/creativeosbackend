@@ -1,7 +1,7 @@
 // middleware/authMiddleware.js
 import jwt   from "jsonwebtoken";
 import Admin from "../models/AdminModel/Admin.js";
-import User  from "../models/UserModel/User.js";
+import User  from "../models/Usermodel/User.js";
 
 // ─── Protect Admin routes ─────────────────────────────────────────────────────
 export const protectAdmin = async (req, res, next) => {

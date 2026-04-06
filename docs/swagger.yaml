@@ -567,3 +567,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/user/video-builder:
+    post:
+      summary: Get module permissions for a specific builder
+      tags: [User - Module Permissions]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                buildername:
+                  type: string
+                  example: "my-builder"
+      responses:
+        '200':
+          description: Module permissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Module permissions retrieved successfully"
+                  data:
+                    type: object
+                    properties:
+                      builderName:
+                        type: string
+                        example: "my-builder"
+                      modules:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            moduleName:
+                              type: string
+                              example: "builder"
+                            permissions:
+                              type: array
+                              items:
+                                type: string
+                                example: "view"
+                  statuscode:
+                    type: integer
+                    example: 200
+        '400':
+          description: Bad request - Missing builder name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
