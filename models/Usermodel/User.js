@@ -75,4 +75,5 @@ imageBuilder: {
   },
 }, { timestamps: true });
 
-export default mongoose.model("User", userSchema);
+// Prevent model overwrite error
+export default mongoose.models.User || mongoose.model("User", userSchema);

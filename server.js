@@ -12,6 +12,7 @@ import imageBuilderRoutes from "./routes/imageBuilder.js";
 import storyboardBuilderRoutes from "./routes/storyboardBuilder.js";
 import navConfigRoute from "./routes/navConfig.js";
 import swaggerUi from "swagger-ui-express";
+import userRoutes from "./routes/userRoutes.js";
 import YAML from "yamljs";
 dotenv.config();
 connectDB();
@@ -33,6 +34,7 @@ app.use("/api/admin/music", musicBuilderRoutes);
 app.use("/api/admin/image", imageBuilderRoutes);
 app.use("/api/admin/storyboard", storyboardBuilderRoutes);
 app.use("/api/admin/nav", navConfigRoute);
+app.use("/api/user", userRoutes);
 const swaggerDocument = YAML.load("./docs/swagger.yaml");
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
