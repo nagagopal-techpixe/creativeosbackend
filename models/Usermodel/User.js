@@ -72,6 +72,11 @@ imageBuilder: {
   details:           detailsPermSchema,
 },
 
+navItems: {
+  isActive:     { type: Boolean, default: true },
+  allowedItems: [{ type: mongoose.Schema.Types.ObjectId }],
+},
+
   },
 }, { timestamps: true });
 
