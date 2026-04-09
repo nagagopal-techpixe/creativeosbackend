@@ -1,6 +1,6 @@
 // controllers/authController.js
 import Admin from "../../models/AdminModel/Admin.js";
-import User  from "../../models/UserModel/User.js";
+import User  from "../../models/Usermodel/User.js";
 import bcrypt from "bcryptjs";
 import jwt    from "jsonwebtoken";
 import crypto from "crypto";
@@ -168,3 +168,4 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+

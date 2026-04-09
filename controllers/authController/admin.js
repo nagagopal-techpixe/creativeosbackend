@@ -1,6 +1,6 @@
 // controllers/adminController.js
 import User             from "../../models/Usermodel/User.js";
-import Admin            from "../../models/Adminmodel/Admin.js";
+import Admin            from "../../models/AdminModel/Admin.js";
 import bcrypt           from "bcryptjs";
 import crypto           from "crypto";
 import { sendWelcomeEmail } from "../../utils/sendEmail.js";
