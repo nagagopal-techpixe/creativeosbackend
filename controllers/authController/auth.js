@@ -1,5 +1,5 @@
 // controllers/authController.js
-import Admin from "../../models/AdminModel/Admin.js";
+import Admin from "../../models/Adminmodel/Admin.js";
 import User  from "../../models/UserModel/User.js";
 import bcrypt from "bcryptjs";
 import jwt    from "jsonwebtoken";
@@ -38,18 +38,28 @@ export const registerAdmin = async (req, res) => {
 export const loginAdmin = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const admin = await Admin.findOne({ email });
+    console.log("Login attempt:", email, password);
 
-    if (admin && (await bcrypt.compare(password, admin.password))) {
+    const admin = await Admin.findOne({ email });
+    console.log("Admin found:", admin);
+
+    if (!admin) {
+      return res.status(401).json({ message: "Admin not found" });
+    }
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+    console.log("Password match:", isMatch);
+
+    if (isMatch) {
       res.json({
-        _id:   admin._id,
-        name:  admin.name,
+        _id: admin._id,
+        name: admin.name,
         email: admin.email,
-        role:  admin.role,
+        role: admin.role,
         token: generateAdminToken(admin._id),
       });
     } else {
-      res.status(401).json({ message: "Invalid admin credentials" });
+      res.status(401).json({ message: "Invalid password" });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -68,7 +78,7 @@ export const loginUser = async (req, res) => {
         name:      user.name,
         email:     user.email,
         role:      user.role,
-        createdBy: user.createdBy, // 👈 shows which admin created this user
+        createdBy: user.createdBy, // shows which admin created this user
         token:     generateUserToken(user._id),
       });
     } else {

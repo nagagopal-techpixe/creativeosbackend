@@ -1,4 +1,4 @@
-import mongoose from "mongoose";  // 👈 was missing
+import mongoose from "mongoose";  // was missing
 
 const itemSchema = new mongoose.Schema({
   icon:  String,

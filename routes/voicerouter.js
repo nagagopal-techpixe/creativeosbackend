@@ -21,7 +21,9 @@ import {
 
 } from "../controllers/voice/voiceBuilder.js";
 
+import { protectAdmin } from "../middleware/authMiddleware.js";
 const router = express.Router();
+router.use(protectAdmin);
 
 //
 // TYPES

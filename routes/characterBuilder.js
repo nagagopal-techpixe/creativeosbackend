@@ -26,8 +26,9 @@ import {
   togglePresetSection
 
 } from "../controllers/character/characterBuilder.js";
-
+import { protectAdmin } from "../middleware/authMiddleware.js";
 const router = express.Router();
+router.use(protectAdmin);
 
 //
 // TYPES
