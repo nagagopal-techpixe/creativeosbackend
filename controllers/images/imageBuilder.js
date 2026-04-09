@@ -72,37 +72,23 @@ export const toggleCategoryGroup = async (req, res) => {
     const doc = await getImageBuilder(res); if (!doc) return;
     const group = doc.categories.items.id(req.params.groupId);
     if (!group) return res.status(404).json({ success: false, message: "Group not found" });
+
     group.isActive = !group.isActive;
     await doc.save();
 
     const { groupId } = req.params;
+    const itemIds = group.items.map(i => String(i._id));
+
     if (group.isActive) {
-      await User.updateMany(
-        {},
-        { $addToSet: { "permissions.imageBuilder.categories.allowedGroups": groupId } }
-      );
-      const itemIds = group.items.map(i => String(i._id));
-      const users = await User.find({});
-      await Promise.all(users.map(async (user) => {
-        const allowedOpts = user.permissions?.imageBuilder?.categories?.allowedOpts ?? {};
-        allowedOpts[groupId] = itemIds;
-        user.permissions.imageBuilder.categories.allowedOpts = allowedOpts;
-        user.markModified("permissions.imageBuilder.categories.allowedOpts");
-        await user.save();
-      }));
+      await User.updateMany({}, {
+        $addToSet: { "permissions.imageBuilder.categories.allowedGroups": groupId },
+        $set:      { [`permissions.imageBuilder.categories.allowedOpts.${groupId}`]: itemIds },
+      });
     } else {
-      await User.updateMany(
-        {},
-        { $pull: { "permissions.imageBuilder.categories.allowedGroups": groupId } }
-      );
-      const users = await User.find({});
-      await Promise.all(users.map(async (user) => {
-        const allowedOpts = user.permissions?.imageBuilder?.categories?.allowedOpts ?? {};
-        allowedOpts[groupId] = [];
-        user.permissions.imageBuilder.categories.allowedOpts = allowedOpts;
-        user.markModified("permissions.imageBuilder.categories.allowedOpts");
-        await user.save();
-      }));
+      await User.updateMany({}, {
+        $pull: { "permissions.imageBuilder.categories.allowedGroups": groupId },
+        $set:  { [`permissions.imageBuilder.categories.allowedOpts.${groupId}`]: [] },
+      });
     }
 
     res.status(200).json({ success: true, data: doc.categories });
@@ -116,27 +102,26 @@ export const toggleCategoryItem = async (req, res) => {
     if (!group) return res.status(404).json({ success: false, message: "Group not found" });
     const item = group.items.id(req.params.itemId);
     if (!item) return res.status(404).json({ success: false, message: "Item not found" });
+
     item.isActive = !item.isActive;
     await doc.save();
 
     const { groupId, itemId } = req.params;
-    const users = await User.find({});
-    await Promise.all(users.map(async (user) => {
-      const allowedOpts = user.permissions?.imageBuilder?.categories?.allowedOpts ?? {};
-      const current = (allowedOpts[groupId] ?? []).map(String);
-      allowedOpts[groupId] = item.isActive
-        ? [...new Set([...current, itemId])]
-        : current.filter(id => id !== itemId);
-      user.permissions.imageBuilder.categories.allowedOpts = allowedOpts;
-      user.markModified("permissions.imageBuilder.categories.allowedOpts");
-      await user.save();
-    }));
+
+    if (item.isActive) {
+      await User.updateMany({}, {
+        $addToSet: { [`permissions.imageBuilder.categories.allowedOpts.${groupId}`]: itemId },
+      });
+    } else {
+      await User.updateMany({}, {
+        $pull: { [`permissions.imageBuilder.categories.allowedOpts.${groupId}`]: itemId },
+      });
+    }
 
     res.status(200).json({ success: true, data: doc.categories });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-//  fixed
 export const toggleCategorySection = async (req, res) => {
   try {
     const doc = await getImageBuilder(res); if (!doc) return;
@@ -303,37 +288,23 @@ export const toggleDetailGroup = async (req, res) => {
     const doc = await getImageBuilder(res); if (!doc) return;
     const group = doc.details.items.id(req.params.groupId);
     if (!group) return res.status(404).json({ success: false, message: "Group not found" });
+
     group.isActive = !group.isActive;
     await doc.save();
 
     const { groupId } = req.params;
+    const optIds = group.opts.map(o => String(o._id));
+
     if (group.isActive) {
-      await User.updateMany(
-        {},
-        { $addToSet: { "permissions.imageBuilder.details.allowedGroups": groupId } }
-      );
-      const optIds = group.opts.map(o => String(o._id));
-      const users = await User.find({});
-      await Promise.all(users.map(async (user) => {
-        const allowedOpts = user.permissions?.imageBuilder?.details?.allowedOpts ?? {};
-        allowedOpts[groupId] = optIds;
-        user.permissions.imageBuilder.details.allowedOpts = allowedOpts;
-        user.markModified("permissions.imageBuilder.details.allowedOpts");
-        await user.save();
-      }));
+      await User.updateMany({}, {
+        $addToSet: { "permissions.imageBuilder.details.allowedGroups": groupId },
+        $set:      { [`permissions.imageBuilder.details.allowedOpts.${groupId}`]: optIds },
+      });
     } else {
-      await User.updateMany(
-        {},
-        { $pull: { "permissions.imageBuilder.details.allowedGroups": groupId } }
-      );
-      const users = await User.find({});
-      await Promise.all(users.map(async (user) => {
-        const allowedOpts = user.permissions?.imageBuilder?.details?.allowedOpts ?? {};
-        allowedOpts[groupId] = [];
-        user.permissions.imageBuilder.details.allowedOpts = allowedOpts;
-        user.markModified("permissions.imageBuilder.details.allowedOpts");
-        await user.save();
-      }));
+      await User.updateMany({}, {
+        $pull: { "permissions.imageBuilder.details.allowedGroups": groupId },
+        $set:  { [`permissions.imageBuilder.details.allowedOpts.${groupId}`]: [] },
+      });
     }
 
     res.status(200).json({ success: true, data: doc.details });
@@ -347,21 +318,21 @@ export const toggleDetailOpt = async (req, res) => {
     if (!group) return res.status(404).json({ success: false, message: "Group not found" });
     const opt = group.opts.id(req.params.optId);
     if (!opt) return res.status(404).json({ success: false, message: "Opt not found" });
+
     opt.isActive = !opt.isActive;
     await doc.save();
 
     const { groupId, optId } = req.params;
-    const users = await User.find({});
-    await Promise.all(users.map(async (user) => {
-      const allowedOpts = user.permissions?.imageBuilder?.details?.allowedOpts ?? {};
-      const current = (allowedOpts[groupId] ?? []).map(String);
-      allowedOpts[groupId] = opt.isActive
-        ? [...new Set([...current, optId])]
-        : current.filter(id => id !== optId);
-      user.permissions.imageBuilder.details.allowedOpts = allowedOpts;
-      user.markModified("permissions.imageBuilder.details.allowedOpts");
-      await user.save();
-    }));
+
+    if (opt.isActive) {
+      await User.updateMany({}, {
+        $addToSet: { [`permissions.imageBuilder.details.allowedOpts.${groupId}`]: optId },
+      });
+    } else {
+      await User.updateMany({}, {
+        $pull: { [`permissions.imageBuilder.details.allowedOpts.${groupId}`]: optId },
+      });
+    }
 
     res.status(200).json({ success: true, data: doc.details });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }

@@ -118,7 +118,33 @@ export const changePassword = async (req, res) => {
   }
 };
 
+export const getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.params.id; // from token or param
 
+    const user = await User.findById(userId).select("name email role");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user,
+    });
+
+  } catch (error) {
+    console.error("Get User Error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
 
 
 export const forgotPassword = async (req, res) => {
