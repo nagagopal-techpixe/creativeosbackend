@@ -43,7 +43,9 @@ import {
 
 } from "../controllers/images/imageBuilder.js";
 
+import { protectAdmin } from "../middleware/authMiddleware.js";
 const router = express.Router();
+router.use(protectAdmin);
 
 //
 // TABS
