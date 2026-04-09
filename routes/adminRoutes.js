@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  createUser, getUserPermissions, updateUserPermissions,
+  createUser,getAdminProfile, getUserPermissions, updateUserPermissions,
   getAllUsers, getMyUsers, deleteUser,
   toggleVideoSection, toggleVideoItem,
   toggleVoiceSection, toggleVoiceItem,
@@ -26,6 +26,7 @@ const router = express.Router();
 router.use(protectAdmin);
 
 // ─── USERS
+router.get("/profile",getAdminProfile);
 router.post("/users",          createUser);
 router.get("/users",           getAllUsers);
 router.get("/users/my",        getMyUsers);

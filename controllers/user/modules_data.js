@@ -12,9 +12,9 @@ export const getmodulepermissions = async(req,res) => {
             })
         }
         
-        console.log('Request body:', req.body);
+        // console.log('Request body:', req.body);
         const buildername = req.body.buildername;
-        console.log('Extracted buildername:', buildername);
+        // console.log('Extracted buildername:', buildername);
         
         if (!buildername) {
             return res.status(400).json({
@@ -29,10 +29,10 @@ export const getmodulepermissions = async(req,res) => {
             user: { _id: req.user._id },
             params: { builderName: buildername }
         };
-        console.log('Mock request created:', mockReq);
+        // console.log('Mock request created:', mockReq);
         
         // Call the helper function - it will handle the response
-        console.log('Calling getBuilderData...');
+        // console.log('Calling getBuilderData...');
         await getBuilderData(mockReq, res);
         
     }catch(error){
