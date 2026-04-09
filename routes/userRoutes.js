@@ -4,6 +4,6 @@ import { getmodulepermissions } from "../controllers/user/modules_data.js";
 import { protectUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-router.post("/video-builder", protectUser, getmodulepermissions);  // 👈 user's filtered view
+router.post("/video-builder", protectUser, getmodulepermissions);  
 
 export default router;

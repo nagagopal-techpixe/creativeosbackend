@@ -1,16 +1,19 @@
 // controllers/adminController.js
-import User             from "../../models/Usermodel/User.js";
+import mongoose from "mongoose";
+import User             from "../../models/UserModel/User.js";
 import Admin            from "../../models/Adminmodel/Admin.js";
 import bcrypt           from "bcryptjs";
 import crypto           from "crypto";
 import { sendWelcomeEmail } from "../../utils/sendEmail.js";
 
+
 import VideoBuilder      from "../../models/VideoBuilder.js";
 import VoiceBuilder      from "../../models/VoiceBuilder.js";
 import CharacterBuilder  from "../../models/CharacterBuilder.js";
-import MusicBuilder      from "../../models/MusicBuilder.js";      // ✅ was missing
+import MusicBuilder      from "../../models/MusicBuilder.js";      //  was missing
 import StoryboardBuilder from "../../models/StoryboardBuilder.js";
 import ImageBuilder from "../../models/ImageBuilder.js";
+import NavConfig from "../../models/NavConfig.js";
 export const createUser = async (req, res) => {
   const { name, email } = req.body;
   try {
@@ -30,17 +33,24 @@ export const createUser = async (req, res) => {
     const plainPassword = generatePassword(name);
     const hashed        = await bcrypt.hash(plainPassword, 10);
 
-const [vb, vo, cb, mb, sb, ib] = await Promise.all([
+const [vb, vo, cb, mb, sb, ib, nc] = await Promise.all([
   VideoBuilder.findOne(),
   VoiceBuilder.findOne(),
   CharacterBuilder.findOne(),
   MusicBuilder.findOne(),
   StoryboardBuilder.findOne(),
-  ImageBuilder.findOne(),       // ✅ add
+  ImageBuilder.findOne(),
+  NavConfig.findOne(),        //  add
 ]);
 
 
     const defaultPermissions = {
+    ...(nc ? {
+  navItems: {
+    isActive:     true,
+    allowedItems: nc.navItems.items.map(i => i._id),
+  },
+} : {}),
       ...(sb ? {
   storyboardBuilder: {
     types:   { isActive: true, allowedItems: sb.types.items.map(i => i._id) },
@@ -66,7 +76,7 @@ imageBuilder: {
   ratios:            { isActive: true, allowedItems: ib.ratios.items.map(i => i._id) },
   presets:           { isActive: true, allowedItems: [] },
 
-  // ✅ categories has groups with items inside
+  //  categories has groups with items inside
   categories: {
     isActive:      true,
     allowedGroups: ib.categories.items.map(g => g._id),
@@ -105,7 +115,7 @@ imageBuilder: {
   characterBuilder: {
     types:   { isActive: true, allowedItems: cb.types.items.map(i => i._id) },
     styles:  { isActive: true, allowedItems: cb.styles.items.map(i => i._id) },
-    poses:   { isActive: true, allowedItems: cb.poses.items.map(i => i._id) },  // ✅
+    poses:   { isActive: true, allowedItems: cb.poses.items.map(i => i._id) },  // 
     presets: { isActive: true, allowedItems: [] },
     details: {
       isActive:      true,
@@ -276,7 +286,7 @@ export const toggleVideoItem = async (req, res) => {
     const user = await User.findByIdAndUpdate(id, update, { new: true });
     if (!user) return res.status(404).json({ message: "User not found" });
     
-    console.log('Updated allowedItems:', user.permissions.videoBuilder[section].allowedItems);
+    // console.log('Updated allowedItems:', user.permissions.videoBuilder[section].allowedItems);
     
     res.json({ allowedItems: user.permissions.videoBuilder[section].allowedItems });
   } catch (error) {
@@ -336,7 +346,7 @@ export const toggleVideoDetailsSection = async (req, res) => {
   }
 };
 
-// ✅ NEW — works correctly even when allowedGroups is empty
+//  NEW — works correctly even when allowedGroups is empty
 export const toggleVideoDetailsGroup = async (req, res) => {
   const { id, groupId } = req.params;
   try {
@@ -382,7 +392,7 @@ export const toggleVideoDetailsOpt = async (req, res) => {
     allowedOpts[groupId] = newArr;
 
     user.permissions.videoBuilder.details.allowedOpts = allowedOpts;
-    user.markModified("permissions.videoBuilder.details.allowedOpts"); // ✅
+    user.markModified("permissions.videoBuilder.details.allowedOpts"); // 
     await user.save();
 
     res.json({ allowedOpts: user.permissions.videoBuilder.details.allowedOpts });
@@ -476,7 +486,7 @@ export const toggleCharacterDetailsOpt = async (req, res) => {
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // ✅ Manually update Mixed field
+    //  Manually update Mixed field
     const allowedOpts = user.permissions.characterBuilder.details.allowedOpts ?? {};
     const currentArr  = (allowedOpts[groupId] ?? []).map(String);
 
@@ -487,7 +497,7 @@ export const toggleCharacterDetailsOpt = async (req, res) => {
     allowedOpts[groupId] = newArr;
 
     user.permissions.characterBuilder.details.allowedOpts = allowedOpts;
-    user.markModified("permissions.characterBuilder.details.allowedOpts"); // ✅ tell Mongoose Mixed changed
+    user.markModified("permissions.characterBuilder.details.allowedOpts"); //  tell Mongoose Mixed changed
     await user.save();
 
     res.json({ allowedOpts: user.permissions.characterBuilder.details.allowedOpts });
@@ -590,7 +600,7 @@ export const toggleMusicDetailsOpt = async (req, res) => {
 
     allowedOpts[groupId] = newArr;
     user.permissions.musicBuilder.details.allowedOpts = allowedOpts;
-    user.markModified("permissions.musicBuilder.details.allowedOpts"); // ✅ Mixed field
+    user.markModified("permissions.musicBuilder.details.allowedOpts"); //  Mixed field
     await user.save();
 
     res.json({ allowedOpts: user.permissions.musicBuilder.details.allowedOpts });
@@ -694,7 +704,7 @@ export const toggleStoryboardDetailsOpt = async (req, res) => {
 
     allowedOpts[groupId] = newArr;
     user.permissions.storyboardBuilder.details.allowedOpts = allowedOpts;
-    user.markModified("permissions.storyboardBuilder.details.allowedOpts"); // ✅ Mixed
+    user.markModified("permissions.storyboardBuilder.details.allowedOpts"); //  Mixed
     await user.save();
 
     res.json({ allowedOpts: user.permissions.storyboardBuilder.details.allowedOpts });
@@ -872,6 +882,43 @@ export const toggleImageCategoriesItem = async (req, res) => {
     await user.save();
 
     res.json({ allowedOpts: user.permissions.imageBuilder.categories.allowedOpts });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+// ─── NAV PERMISSIONS ─────────────────────────────────────────
+
+// ─── NAV PERMISSIONS ─────────────────────────────────────────────
+
+export const toggleNavSection = async (req, res) => {
+  const { id } = req.params;
+  const { isActive } = req.body;
+  try {
+    const user = await User.findByIdAndUpdate(
+      id,
+      { $set: { "permissions.navItems.isActive": isActive } },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ isActive: user.permissions.navItems.isActive });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const toggleNavItem = async (req, res) => {
+  const { id, itemId } = req.params;
+  const { isActive } = req.body;
+  try {
+    const update = isActive
+      ? { $addToSet: { "permissions.navItems.allowedItems": itemId } }
+      : { $pull:     { "permissions.navItems.allowedItems": itemId } };
+
+    const user = await User.findByIdAndUpdate(id, update, { new: true });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ allowedItems: user.permissions.navItems.allowedItems });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

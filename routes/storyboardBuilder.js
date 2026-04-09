@@ -8,7 +8,9 @@ import {
   getPresets, togglePresetSection
 } from "../controllers/storyboard/storyboardBuilder.js";
 
+import { protectAdmin } from "../middleware/authMiddleware.js";
 const router = express.Router();
+router.use(protectAdmin);
 
 //
 // TYPES
