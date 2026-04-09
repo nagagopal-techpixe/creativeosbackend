@@ -165,7 +165,7 @@ export const toggleDetailGroup = async (req, res) => {
 
       let details = user.permissions.musicBuilder.details;
 
-      // ✅ GROUP HANDLING
+      //  GROUP HANDLING
       if (group.isActive) {
         if (!details.allowedGroups.includes(groupId)) {
           details.allowedGroups.push(groupId);
@@ -214,7 +214,7 @@ export const toggleDetailOpt = async (req, res) => {
 
     await Promise.all(users.map(async (user) => {
 
-      // ✅ ALWAYS INIT FULL STRUCTURE
+      //  ALWAYS INIT FULL STRUCTURE
       if (!user.permissions) user.permissions = {};
       if (!user.permissions.musicBuilder) user.permissions.musicBuilder = {};
       if (!user.permissions.musicBuilder.details) {
@@ -226,14 +226,14 @@ export const toggleDetailOpt = async (req, res) => {
 
       let allowedOpts = user.permissions.musicBuilder.details.allowedOpts;
 
-      // ✅ ensure group exists
+      //  ensure group exists
       if (!allowedOpts[groupId]) {
         allowedOpts[groupId] = [];
       }
 
       const current = allowedOpts[groupId].map(String);
 
-      // ✅ SAFE UPDATE
+      //  SAFE UPDATE
       if (opt.isActive) {
         allowedOpts[groupId] = [...new Set([...current, optId])];
       } else {
@@ -242,7 +242,7 @@ export const toggleDetailOpt = async (req, res) => {
 
       user.permissions.musicBuilder.details.allowedOpts = allowedOpts;
 
-      // ✅ VERY IMPORTANT (Mongo fix)
+      //  VERY IMPORTANT (Mongo fix)
       user.markModified("permissions.musicBuilder.details.allowedOpts");
 
       await user.save();

@@ -37,11 +37,11 @@ const userSchema = new mongoose.Schema({
       pacing: { type: sectionPermSchema, default: () => ({}) },
     },
 
-    // ✅ matches CharacterBuilder model exactly: types, styles, poses, presets, details
+    //  matches CharacterBuilder model exactly: types, styles, poses, presets, details
     characterBuilder: {
       types:   { type: sectionPermSchema, default: () => ({}) },
       styles:  { type: sectionPermSchema, default: () => ({}) },
-      poses:   { type: sectionPermSchema, default: () => ({}) },  // ✅ poses not durations/formats/hooks
+      poses:   { type: sectionPermSchema, default: () => ({}) },  //  poses not durations/formats/hooks
       presets: { type: sectionPermSchema, default: () => ({}) },
       details: detailsPermSchema,
     },
@@ -70,6 +70,10 @@ imageBuilder: {
   ratios:            { type: sectionPermSchema, default: () => ({}) },
   presets:           { type: sectionPermSchema, default: () => ({}) },
   details:           detailsPermSchema,
+},
+navItems: {
+  isActive:     { type: Boolean, default: true },
+  allowedItems: [{ type: mongoose.Schema.Types.ObjectId }],
 },
 
 navItems: {

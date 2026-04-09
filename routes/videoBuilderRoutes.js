@@ -9,7 +9,9 @@ import {
   getPresets,       togglePresetSection,
 } from "../controllers/videobuilder/videoBuilderController.js";
 
+import { protectAdmin } from "../middleware/authMiddleware.js";
 const router = express.Router();
+router.use(protectAdmin);
 
 // ── TYPES 
 router.get("/types",                          getTypes);

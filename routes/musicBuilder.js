@@ -27,7 +27,9 @@ import {
 
 } from "../controllers/music/musicBuilder.js";
 
+import { protectAdmin } from "../middleware/authMiddleware.js";
 const router = express.Router();
+router.use(protectAdmin);
 
 //
 // TYPES
