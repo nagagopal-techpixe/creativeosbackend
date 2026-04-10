@@ -139,9 +139,7 @@ export const getDetails = async (req, res) => {
 
 export const toggleDetailGroup = async (req, res) => {
   try {
-    const doc = await getMusicBuilder(res); 
-    if (!doc) return;
-
+    const doc = await getMusicBuilder(res); if (!doc) return;
     const group = doc.details.items.id(req.params.groupId);
     if (!group) return res.status(404).json({ success: false, message: "Group not found" });
 
@@ -149,110 +147,49 @@ export const toggleDetailGroup = async (req, res) => {
     await doc.save();
 
     const { groupId } = req.params;
+    const optIds = group.opts.map(o => String(o._id));
 
-    const users = await User.find({});
-
-    await Promise.all(users.map(async (user) => {
-
-      if (!user.permissions) user.permissions = {};
-      if (!user.permissions.musicBuilder) user.permissions.musicBuilder = {};
-      if (!user.permissions.musicBuilder.details) {
-        user.permissions.musicBuilder.details = {
-          allowedGroups: [],
-          allowedOpts: {},
-        };
-      }
-
-      let details = user.permissions.musicBuilder.details;
-
-      //  GROUP HANDLING
-      if (group.isActive) {
-        if (!details.allowedGroups.includes(groupId)) {
-          details.allowedGroups.push(groupId);
-        }
-
-        // add all options
-        details.allowedOpts[groupId] = group.opts.map(o => String(o._id));
-
-      } else {
-        details.allowedGroups = details.allowedGroups.filter(id => id !== groupId);
-        details.allowedOpts[groupId] = [];
-      }
-
-      user.permissions.musicBuilder.details = details;
-
-      user.markModified("permissions.musicBuilder.details");
-
-      await user.save();
-    }));
+    if (group.isActive) {
+      await User.updateMany({}, {
+        $addToSet: { "permissions.musicBuilder.details.allowedGroups": groupId },
+        $set:      { [`permissions.musicBuilder.details.allowedOpts.${groupId}`]: optIds },
+      });
+    } else {
+      await User.updateMany({}, {
+        $pull: { "permissions.musicBuilder.details.allowedGroups": groupId },
+        $set:  { [`permissions.musicBuilder.details.allowedOpts.${groupId}`]: [] },
+      });
+    }
 
     res.status(200).json({ success: true, data: doc.details });
-
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
 export const toggleDetailOpt = async (req, res) => {
   try {
-    const doc = await getMusicBuilder(res); 
-    if (!doc) return;
-
+    const doc = await getMusicBuilder(res); if (!doc) return;
     const group = doc.details.items.id(req.params.groupId);
     if (!group) return res.status(404).json({ success: false, message: "Group not found" });
-
     const opt = group.opts.id(req.params.optId);
     if (!opt) return res.status(404).json({ success: false, message: "Opt not found" });
 
-    // toggle global state
     opt.isActive = !opt.isActive;
     await doc.save();
 
     const { groupId, optId } = req.params;
 
-    const users = await User.find({});
-
-    await Promise.all(users.map(async (user) => {
-
-      //  ALWAYS INIT FULL STRUCTURE
-      if (!user.permissions) user.permissions = {};
-      if (!user.permissions.musicBuilder) user.permissions.musicBuilder = {};
-      if (!user.permissions.musicBuilder.details) {
-        user.permissions.musicBuilder.details = {
-          allowedGroups: [],
-          allowedOpts: {},
-        };
-      }
-
-      let allowedOpts = user.permissions.musicBuilder.details.allowedOpts;
-
-      //  ensure group exists
-      if (!allowedOpts[groupId]) {
-        allowedOpts[groupId] = [];
-      }
-
-      const current = allowedOpts[groupId].map(String);
-
-      //  SAFE UPDATE
-      if (opt.isActive) {
-        allowedOpts[groupId] = [...new Set([...current, optId])];
-      } else {
-        allowedOpts[groupId] = current.filter(id => id !== optId);
-      }
-
-      user.permissions.musicBuilder.details.allowedOpts = allowedOpts;
-
-      //  VERY IMPORTANT (Mongo fix)
-      user.markModified("permissions.musicBuilder.details.allowedOpts");
-
-      await user.save();
-    }));
+    if (opt.isActive) {
+      await User.updateMany({}, {
+        $addToSet: { [`permissions.musicBuilder.details.allowedOpts.${groupId}`]: optId },
+      });
+    } else {
+      await User.updateMany({}, {
+        $pull: { [`permissions.musicBuilder.details.allowedOpts.${groupId}`]: optId },
+      });
+    }
 
     res.status(200).json({ success: true, data: doc.details });
-
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
 export const toggleDetailSection = async (req, res) => {

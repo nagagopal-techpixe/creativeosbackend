@@ -7,7 +7,6 @@ const getVideoBuilder = async (res) => {
   return doc;
 };
 
-// ── HELPER — sync item toggle to all users
 const syncItemToUsers = async (builderKey, sectionKey, itemId, isActive) => {
   if (isActive) {
     await User.updateMany(
@@ -210,40 +209,23 @@ export const toggleDetailGroup = async (req, res) => {
     const doc = await getVideoBuilder(res); if (!doc) return;
     const group = doc.details.items.id(req.params.groupId);
     if (!group) return res.status(404).json({ success: false, message: "Group not found" });
+
     group.isActive = !group.isActive;
     await doc.save();
 
     const { groupId } = req.params;
+    const optIds = group.opts.map(o => String(o._id));
 
     if (group.isActive) {
-      // group turned ON → add group + all its opts back to all users
-      await User.updateMany(
-        {},
-        { $addToSet: { "permissions.videoBuilder.details.allowedGroups": groupId } }
-      );
-      const optIds = group.opts.map(o => String(o._id));
-      const users = await User.find({});
-      await Promise.all(users.map(async (user) => {
-        const allowedOpts = user.permissions?.videoBuilder?.details?.allowedOpts ?? {};
-        allowedOpts[groupId] = optIds;
-        user.permissions.videoBuilder.details.allowedOpts = allowedOpts;
-        user.markModified("permissions.videoBuilder.details.allowedOpts");
-        await user.save();
-      }));
+      await User.updateMany({}, {
+        $addToSet: { "permissions.videoBuilder.details.allowedGroups": groupId },
+        $set:      { [`permissions.videoBuilder.details.allowedOpts.${groupId}`]: optIds },
+      });
     } else {
-      // group turned OFF → remove group + clear its opts from all users
-      await User.updateMany(
-        {},
-        { $pull: { "permissions.videoBuilder.details.allowedGroups": groupId } }
-      );
-      const users = await User.find({});
-      await Promise.all(users.map(async (user) => {
-        const allowedOpts = user.permissions?.videoBuilder?.details?.allowedOpts ?? {};
-        allowedOpts[groupId] = [];
-        user.permissions.videoBuilder.details.allowedOpts = allowedOpts;
-        user.markModified("permissions.videoBuilder.details.allowedOpts");
-        await user.save();
-      }));
+      await User.updateMany({}, {
+        $pull: { "permissions.videoBuilder.details.allowedGroups": groupId },
+        $set:  { [`permissions.videoBuilder.details.allowedOpts.${groupId}`]: [] },
+      });
     }
 
     res.status(200).json({ success: true, data: doc.details });
@@ -257,25 +239,21 @@ export const toggleDetailOpt = async (req, res) => {
     if (!group) return res.status(404).json({ success: false, message: "Group not found" });
     const opt = group.opts.id(req.params.optId);
     if (!opt) return res.status(404).json({ success: false, message: "Opt not found" });
+
     opt.isActive = !opt.isActive;
     await doc.save();
 
     const { groupId, optId } = req.params;
 
-    // ── sync to all users (Mixed field needs manual update)
-    const users = await User.find({});
-    await Promise.all(users.map(async (user) => {
-      const allowedOpts = user.permissions?.videoBuilder?.details?.allowedOpts ?? {};
-      const current = (allowedOpts[groupId] ?? []).map(String);
-
-      allowedOpts[groupId] = opt.isActive
-        ? [...new Set([...current, optId])]
-        : current.filter(id => id !== optId);
-
-      user.permissions.videoBuilder.details.allowedOpts = allowedOpts;
-      user.markModified("permissions.videoBuilder.details.allowedOpts");
-      await user.save();
-    }));
+    if (opt.isActive) {
+      await User.updateMany({}, {
+        $addToSet: { [`permissions.videoBuilder.details.allowedOpts.${groupId}`]: optId },
+      });
+    } else {
+      await User.updateMany({}, {
+        $pull: { [`permissions.videoBuilder.details.allowedOpts.${groupId}`]: optId },
+      });
+    }
 
     res.status(200).json({ success: true, data: doc.details });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
