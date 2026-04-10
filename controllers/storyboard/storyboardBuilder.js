@@ -1,9 +1,6 @@
 import StoryboardBuilder from "../../models/StoryboardBuilder.js";
 import User from "../../models/Usermodel/User.js";
 
-//
-// HELPERS
-//
 const getBuilder = async (res) => {
   const doc = await StoryboardBuilder.findOne();
   if (!doc) {
@@ -27,9 +24,7 @@ const syncItemToUsers = async (sectionKey, itemId, isActive) => {
   }
 };
 
-//
 // TYPES
-//
 export const getTypes = async (req, res) => {
   try {
     const doc = await getBuilder(res); if (!doc) return;
@@ -64,9 +59,7 @@ export const toggleTypeSection = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-//
 // STYLES
-//
 export const getStyles = async (req, res) => {
   try {
     const doc = await getBuilder(res); if (!doc) return;
@@ -101,9 +94,7 @@ export const toggleStyleSection = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-//
 // FRAMES
-//
 export const getFrames = async (req, res) => {
   try {
     const doc = await getBuilder(res); if (!doc) return;
@@ -138,9 +129,7 @@ export const toggleFrameSection = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-//
 // RATIOS
-//
 export const getRatios = async (req, res) => {
   try {
     const doc = await getBuilder(res); if (!doc) return;
@@ -175,9 +164,7 @@ export const toggleRatioSection = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-//
-// DETAILS (GROUP + OPTS)
-//
+// DETAILS
 export const getDetails = async (req, res) => {
   try {
     const doc = await getBuilder(res); if (!doc) return;
@@ -195,36 +182,18 @@ export const toggleDetailGroup = async (req, res) => {
     await doc.save();
 
     const { groupId } = req.params;
+    const optIds = group.opts.map((o) => String(o._id));
 
     if (group.isActive) {
-      // group turned ON → add group + all its opts to all users
-      await User.updateMany(
-        {},
-        { $addToSet: { "permissions.storyboardBuilder.details.allowedGroups": groupId } }
-      );
-      const optIds = group.opts.map((o) => String(o._id));
-      const users = await User.find({});
-      await Promise.all(users.map(async (user) => {
-        const allowedOpts = user.permissions?.storyboardBuilder?.details?.allowedOpts ?? {};
-        allowedOpts[groupId] = optIds;
-        user.permissions.storyboardBuilder.details.allowedOpts = allowedOpts;
-        user.markModified("permissions.storyboardBuilder.details.allowedOpts");
-        await user.save();
-      }));
+      await User.updateMany({}, {
+        $addToSet: { "permissions.storyboardBuilder.details.allowedGroups": groupId },
+        $set:      { [`permissions.storyboardBuilder.details.allowedOpts.${groupId}`]: optIds },
+      });
     } else {
-      // group turned OFF → remove group + clear its opts from all users
-      await User.updateMany(
-        {},
-        { $pull: { "permissions.storyboardBuilder.details.allowedGroups": groupId } }
-      );
-      const users = await User.find({});
-      await Promise.all(users.map(async (user) => {
-        const allowedOpts = user.permissions?.storyboardBuilder?.details?.allowedOpts ?? {};
-        allowedOpts[groupId] = [];
-        user.permissions.storyboardBuilder.details.allowedOpts = allowedOpts;
-        user.markModified("permissions.storyboardBuilder.details.allowedOpts");
-        await user.save();
-      }));
+      await User.updateMany({}, {
+        $pull: { "permissions.storyboardBuilder.details.allowedGroups": groupId },
+        $set:  { [`permissions.storyboardBuilder.details.allowedOpts.${groupId}`]: [] },
+      });
     }
 
     res.status(200).json({ success: true, data: doc.details });
@@ -244,19 +213,15 @@ export const toggleDetailOpt = async (req, res) => {
 
     const { groupId, optId } = req.params;
 
-    const users = await User.find({});
-    await Promise.all(users.map(async (user) => {
-      const allowedOpts = user.permissions?.storyboardBuilder?.details?.allowedOpts ?? {};
-      const current = (allowedOpts[groupId] ?? []).map(String);
-
-      allowedOpts[groupId] = opt.isActive
-        ? [...new Set([...current, optId])]
-        : current.filter((id) => id !== optId);
-
-      user.permissions.storyboardBuilder.details.allowedOpts = allowedOpts;
-      user.markModified("permissions.storyboardBuilder.details.allowedOpts");
-      await user.save();
-    }));
+    if (opt.isActive) {
+      await User.updateMany({}, {
+        $addToSet: { [`permissions.storyboardBuilder.details.allowedOpts.${groupId}`]: optId },
+      });
+    } else {
+      await User.updateMany({}, {
+        $pull: { [`permissions.storyboardBuilder.details.allowedOpts.${groupId}`]: optId },
+      });
+    }
 
     res.status(200).json({ success: true, data: doc.details });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
@@ -275,9 +240,7 @@ export const toggleDetailSection = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-//
 // PRESETS
-//
 export const getPresets = async (req, res) => {
   try {
     const doc = await getBuilder(res); if (!doc) return;
@@ -296,4 +259,4 @@ export const togglePresetSection = async (req, res) => {
     );
     res.status(200).json({ success: true, data: doc.presets });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-};
+};  
