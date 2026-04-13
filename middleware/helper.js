@@ -4,7 +4,7 @@ import ImageBuilderModel from '../models/ImageBuilder.js';
 import VoiceBuilderModel from '../models/VoiceBuilder.js';
 import MusicBuilderModel from '../models/MusicBuilder.js';
 import StoryboardBuilderModel from '../models/StoryboardBuilder.js';
-import User from '../models/Usermodel/User.js';
+import User from '../models/UserModel/User.js';
 import navModel from '../models/NavConfig.js'
 
 // builderName → which collection to query
