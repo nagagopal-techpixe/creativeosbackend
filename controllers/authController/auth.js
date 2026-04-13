@@ -38,17 +38,17 @@ export const registerAdmin = async (req, res) => {
 export const loginAdmin = async (req, res) => {
   const { email, password } = req.body;
   try {
-    console.log("Login attempt:", email, password);
+    // console.log("Login attempt:", email, password);
 
     const admin = await Admin.findOne({ email });
-    console.log("Admin found:", admin);
+    // console.log("Admin found:", admin);
 
     if (!admin) {
       return res.status(401).json({ message: "Admin not found" });
     }
 
     const isMatch = await bcrypt.compare(password, admin.password);
-    console.log("Password match:", isMatch);
+    // console.log("Password match:", isMatch);
 
     if (isMatch) {
       res.json({

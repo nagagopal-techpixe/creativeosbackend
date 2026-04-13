@@ -1,5 +1,4 @@
-import mongoose from "mongoose" 
-
+import mongoose from "mongoose";
 
 const modelsSchema = new mongoose.Schema({
     model_name: {
@@ -8,22 +7,22 @@ const modelsSchema = new mongoose.Schema({
     },
     category: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Category',
+        ref: 'Categories',
         required: true
     },
     link: {
         type: String,
         required: true
     },
-    model_attributes:[
+    model_attributes: [
         {
-            type: String,
-            required: true
+            name:  { type: String, required: true },
+            dtype: { type: String, required: true },
+            _id:   false
         }
     ]
-    
-},{
-    timestamps: true
-})
-const Models = mongoose.model('Models', modelsSchema)
-export default Models
+
+}, { timestamps: true });
+
+const Models = mongoose.model('Models', modelsSchema);
+export default Models;
