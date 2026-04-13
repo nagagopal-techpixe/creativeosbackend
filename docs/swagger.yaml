@@ -17,6 +17,12 @@ tags:
     description: User login only — no self-registration (User model)
   - name: Admin - User Management
     description: Admin-only CRUD on users. Requires Admin Bearer token.
+  - name: Categories
+    description: Category management. Admin can create, Users can view.
+  - name: User - Module Permissions
+    description: Module permission checks for users.
+  - name: Models
+    description: Model management. Admin can create & update, Users can view.
 
 components:
   securitySchemes:
@@ -48,18 +54,15 @@ components:
         resetPasswordToken:
           type: string
           nullable: true
-          description: Hashed reset token stored in DB (null when not requested)
           example: null
         resetPasswordExpire:
           type: string
           format: date-time
           nullable: true
-          description: Expiry time of reset token (null when not requested)
           example: null
 
     CreatedByAdmin:
       type: object
-      description: Admin who created this user (populated from Admin model)
       properties:
         _id:
           type: string
@@ -123,15 +126,136 @@ components:
           example: "user"
         createdBy:
           type: string
-          description: Admin ObjectId who created this user
           example: "60a1b2c3d4e5f6a7b8c9d0e1"
         plainPassword:
           type: string
-          description: Share this plain password with the user to login
           example: "123456"
         message:
           type: string
           example: "User created successfully"
+
+    # ── Categories ────────────────────────────────────────────
+    Category:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "664f1b2c9e1a2b3c4d5e6f7a"
+        category_name:
+          type: string
+          example: "Electronics"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-04-01T09:27:41.058Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-04-01T09:27:41.058Z"
+
+    CategoryInput:
+      type: object
+      required:
+        - category_name
+      properties:
+        category_name:
+          type: string
+          example: "Electronics"
+
+    # ── Models ────────────────────────────────────────────────
+    PopulatedCategory:
+      type: object
+      description: Populated category reference
+      properties:
+        _id:
+          type: string
+          example: "664f1b2c9e1a2b3c4d5e6f7a"
+        category_name:
+          type: string
+          example: "Electronics"
+
+    Model:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "665a2c3d4e5f6a7b8c9d0e1f"
+        model_name:
+          type: string
+          example: "GPT-4o"
+        category:
+          $ref: '#/components/schemas/PopulatedCategory'
+        link:
+          type: string
+          example: "https://example.com/model/gpt4o"
+        model_attributes:
+          type: array
+          items:
+            type: string
+          example: ["text", "vision", "audio"]
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-04-01T09:27:41.058Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-04-01T09:27:41.058Z"
+
+    ModelInput:
+      type: object
+      required:
+        - model_name
+        - category
+        - link
+      properties:
+        model_name:
+          type: string
+          example: "GPT-4o"
+        category:
+          type: string
+          description: MongoDB ObjectId of the category
+          example: "664f1b2c9e1a2b3c4d5e6f7a"
+        link:
+          type: string
+          example: "https://example.com/model/gpt4o"
+        model_attributes:
+          type: array
+          items:
+            type: string
+          example: ["text", "vision", "audio"]
+
+    ModelUpdateInput:
+      type: object
+      description: All fields are optional — only provided fields will be updated
+      properties:
+        model_name:
+          type: string
+          example: "GPT-4o Turbo"
+        category:
+          type: string
+          description: MongoDB ObjectId of the category
+          example: "664f1b2c9e1a2b3c4d5e6f7a"
+        link:
+          type: string
+          example: "https://example.com/model/gpt4o-turbo"
+        model_attributes:
+          type: array
+          items:
+            type: string
+          example: ["text", "vision", "audio", "code"]
+
+    # ── Shared ────────────────────────────────────────────────
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+        statuscode:
+          type: integer
 
     ErrorResponse:
       type: object
@@ -139,9 +263,17 @@ components:
         message:
           type: string
           example: "Invalid credentials"
+        success:
+          type: boolean
+          example: false
+        statuscode:
+          type: integer
 
 paths:
 
+  # ─────────────────────────────────────────────────────────────
+  # Admin Auth
+  # ─────────────────────────────────────────────────────────────
   /api/auth/admin/register:
     post:
       summary: Register admin — one-time setup (Admin model)
@@ -322,6 +454,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # ─────────────────────────────────────────────────────────────
+  # User Auth
+  # ─────────────────────────────────────────────────────────────
   /api/auth/user/login:
     post:
       summary: User login — credentials provided by admin (User model)
@@ -392,13 +527,13 @@ paths:
                     type: string
                     example: "Password changed successfully"
         '400':
-          description: Both fields are required / Password too short
+          description: Both fields required / Password too short
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Current password is incorrect / Invalid token
+          description: Current password incorrect / Invalid token
           content:
             application/json:
               schema:
@@ -416,6 +551,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # ─────────────────────────────────────────────────────────────
+  # Admin - User Management
+  # ─────────────────────────────────────────────────────────────
   /api/auth/admin/users:
     post:
       summary: Admin creates a new user — stores createdBy admin ID
@@ -436,7 +574,6 @@ paths:
                 email:
                   type: string
                   example: "naga@example.com"
-                
       responses:
         '201':
           description: User created — createdBy set to req.admin._id
@@ -504,7 +641,7 @@ paths:
         - BearerAuth: []
       responses:
         '200':
-          description: Users created by this specific admin (filtered by createdBy)
+          description: Users filtered by createdBy this admin
           content:
             application/json:
               schema:
@@ -536,7 +673,6 @@ paths:
           required: true
           schema:
             type: string
-          description: MongoDB ObjectId of the user
           example: "69cce50d3b59c6cca8e56634"
       responses:
         '200':
@@ -567,6 +703,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  # ─────────────────────────────────────────────────────────────
+  # User - Module Permissions
+  # ─────────────────────────────────────────────────────────────
   /api/user/video-builder:
     post:
       summary: Get module permissions for a specific builder
@@ -620,7 +760,7 @@ paths:
                     type: integer
                     example: 200
         '400':
-          description: Bad request - Missing builder name
+          description: Missing builder name
           content:
             application/json:
               schema:
@@ -637,5 +777,548 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  
-  
+
+  # ─────────────────────────────────────────────────────────────
+  # Categories
+  # ─────────────────────────────────────────────────────────────
+  /api/admin/categories:
+    post:
+      summary: Create a new category
+      tags: [Categories]
+      security:
+        - BearerAuth: []
+      description: >
+        Creates a new category. **Admin access required** (`protectAdmin`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+            example:
+              category_name: "Electronics"
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Category'
+              example:
+                success: true
+                message: "Category created successfully"
+                data:
+                  _id: "664f1b2c9e1a2b3c4d5e6f7a"
+                  category_name: "Electronics"
+                  createdAt: "2026-04-01T10:00:00.000Z"
+                  updatedAt: "2026-04-01T10:00:00.000Z"
+                statuscode: 201
+        '400':
+          description: Category name is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized — missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden — Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Category already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: Get all categories
+      tags: [Categories]
+      security:
+        - BearerAuth: []
+      description: >
+        Returns all categories sorted by newest first. **User access required** (`protectUser`).
+      responses:
+        '200':
+          description: Categories fetched successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      count:
+                        type: integer
+                        example: 2
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Category'
+              example:
+                success: true
+                message: "Categories fetched successfully"
+                count: 2
+                data:
+                  - _id: "664f1b2c9e1a2b3c4d5e6f7a"
+                    category_name: "Electronics"
+                  - _id: "664f1b2c9e1a2b3c4d5e6f7b"
+                    category_name: "Clothing"
+                statuscode: 200
+        '401':
+          description: Unauthorized — missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/categories/{id}:
+    get:
+      summary: Get a category by ID
+      tags: [Categories]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "664f1b2c9e1a2b3c4d5e6f7a"
+      responses:
+        '200':
+          description: Category fetched successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Category'
+        '401':
+          description: Unauthorized — missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ─────────────────────────────────────────────────────────────
+  # Models
+  # ─────────────────────────────────────────────────────────────
+  /api/admin/models:
+    post:
+      summary: Create a new model
+      tags: [Models]
+      security:
+        - BearerAuth: []
+      description: >
+        Creates a new model linked to a category. **Admin access required** (`protectAdmin`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelInput'
+            example:
+              model_name: "GPT-4o"
+              category: "664f1b2c9e1a2b3c4d5e6f7a"
+              link: "https://example.com/model/gpt4o"
+              model_attributes: ["text", "vision", "audio"]
+      responses:
+        '201':
+          description: Model created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Model'
+              example:
+                success: true
+                message: "Model created successfully"
+                data:
+                  _id: "665a2c3d4e5f6a7b8c9d0e1f"
+                  model_name: "GPT-4o"
+                  category:
+                    _id: "664f1b2c9e1a2b3c4d5e6f7a"
+                    category_name: "Electronics"
+                  link: "https://example.com/model/gpt4o"
+                  model_attributes: ["text", "vision", "audio"]
+                  createdAt: "2026-04-01T10:00:00.000Z"
+                  updatedAt: "2026-04-01T10:00:00.000Z"
+                statuscode: 201
+        '400':
+          description: model_name, category and link are required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "model_name, category and link are required"
+                statuscode: 400
+        '401':
+          description: Unauthorized — missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden — Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Category not found"
+                statuscode: 404
+        '409':
+          description: Model with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Model with this name already exists"
+                statuscode: 409
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: Get all models
+      tags: [Models]
+      security:
+        - BearerAuth: []
+      description: >
+        Returns all models with populated category. Sorted newest first. **User access required** (`protectUser`).
+      responses:
+        '200':
+          description: Models fetched successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      count:
+                        type: integer
+                        example: 2
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Model'
+              example:
+                success: true
+                message: "Models fetched successfully"
+                count: 2
+                data:
+                  - _id: "665a2c3d4e5f6a7b8c9d0e1f"
+                    model_name: "GPT-4o"
+                    category:
+                      _id: "664f1b2c9e1a2b3c4d5e6f7a"
+                      category_name: "Electronics"
+                    link: "https://example.com/model/gpt4o"
+                    model_attributes: ["text", "vision", "audio"]
+                    createdAt: "2026-04-01T10:00:00.000Z"
+                    updatedAt: "2026-04-01T10:00:00.000Z"
+                  - _id: "665a2c3d4e5f6a7b8c9d0e2g"
+                    model_name: "Claude 3"
+                    category:
+                      _id: "664f1b2c9e1a2b3c4d5e6f7b"
+                      category_name: "AI"
+                    link: "https://example.com/model/claude3"
+                    model_attributes: ["text", "code"]
+                    createdAt: "2026-03-28T08:00:00.000Z"
+                    updatedAt: "2026-03-28T08:00:00.000Z"
+                statuscode: 200
+        '401':
+          description: Unauthorized — missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/models/{id}:
+    get:
+      summary: Get a model by ID
+      tags: [Models]
+      security:
+        - BearerAuth: []
+      description: >
+        Returns a single model by its MongoDB ObjectId. **User access required** (`protectUser`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: MongoDB ObjectId of the model
+          example: "665a2c3d4e5f6a7b8c9d0e1f"
+      responses:
+        '200':
+          description: Model fetched successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Model'
+              example:
+                success: true
+                message: "Model fetched successfully"
+                data:
+                  _id: "665a2c3d4e5f6a7b8c9d0e1f"
+                  model_name: "GPT-4o"
+                  category:
+                    _id: "664f1b2c9e1a2b3c4d5e6f7a"
+                    category_name: "Electronics"
+                  link: "https://example.com/model/gpt4o"
+                  model_attributes: ["text", "vision", "audio"]
+                  createdAt: "2026-04-01T10:00:00.000Z"
+                  updatedAt: "2026-04-01T10:00:00.000Z"
+                statuscode: 200
+        '401':
+          description: Unauthorized — missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Model not found"
+                statuscode: 404
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      summary: Update a model by ID
+      tags: [Models]
+      security:
+        - BearerAuth: []
+      description: >
+        Partially updates a model. Only provided fields are updated. **Admin access required** (`protectAdmin`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: MongoDB ObjectId of the model
+          example: "665a2c3d4e5f6a7b8c9d0e1f"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelUpdateInput'
+            example:
+              model_name: "GPT-4o Turbo"
+              model_attributes: ["text", "vision", "audio", "code"]
+      responses:
+        '200':
+          description: Model updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Model'
+              example:
+                success: true
+                message: "Model updated successfully"
+                data:
+                  _id: "665a2c3d4e5f6a7b8c9d0e1f"
+                  model_name: "GPT-4o Turbo"
+                  category:
+                    _id: "664f1b2c9e1a2b3c4d5e6f7a"
+                    category_name: "Electronics"
+                  link: "https://example.com/model/gpt4o"
+                  model_attributes: ["text", "vision", "audio", "code"]
+                  createdAt: "2026-04-01T10:00:00.000Z"
+                  updatedAt: "2026-04-13T12:00:00.000Z"
+                statuscode: 200
+        '401':
+          description: Unauthorized — missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden — Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Model not found / Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Model not found"
+                statuscode: 404
+        '409':
+          description: Model with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Model with this name already exists"
+                statuscode: 409
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/models/category/{categoryId}:
+    get:
+      summary: Get all models by category ID
+      tags: [Models]
+      security:
+        - BearerAuth: []
+      description: >
+        Returns all models belonging to a specific category. **User access required** (`protectUser`).
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: MongoDB ObjectId of the category
+          example: "664f1b2c9e1a2b3c4d5e6f7a"
+      responses:
+        '200':
+          description: Models fetched successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      count:
+                        type: integer
+                        example: 1
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Model'
+              example:
+                success: true
+                message: "Models fetched successfully"
+                count: 1
+                data:
+                  - _id: "665a2c3d4e5f6a7b8c9d0e1f"
+                    model_name: "GPT-4o"
+                    category:
+                      _id: "664f1b2c9e1a2b3c4d5e6f7a"
+                      category_name: "Electronics"
+                    link: "https://example.com/model/gpt4o"
+                    model_attributes: ["text", "vision", "audio"]
+                    createdAt: "2026-04-01T10:00:00.000Z"
+                    updatedAt: "2026-04-01T10:00:00.000Z"
+                statuscode: 200
+        '401':
+          description: Unauthorized — missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Category not found"
+                statuscode: 404
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
