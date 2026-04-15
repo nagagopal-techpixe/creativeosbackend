@@ -16,9 +16,11 @@ const modelsSchema = new mongoose.Schema({
     },
     model_attributes: [
         {
-            name:  { type: String, required: true },
-            dtype: { type: String, required: true },
-            _id:   false
+            name:     { type: String,  required: true },
+            dtype:    { type: String,  required: true },
+            value:    { type: String,  default: "" },      // ← new
+            isActive: { type: Boolean, default: true },    // ← new
+            _id:      false
         }
     ]
 

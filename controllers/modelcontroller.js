@@ -33,9 +33,13 @@ export const createModel = async (req, res) => {
         }
 
         // Validate model_attributes shape: [{ name, dtype }]
-        const attrs = Array.isArray(model_attributes)
-            ? model_attributes.filter((a) => a?.name && a?.dtype)
-            : [];
+       const attrs = Array.isArray(model_attributes)
+    ? model_attributes
+        .filter((a) => a?.name && a?.dtype)
+        .map(({ name, dtype, value = "", isActive = true }) => ({
+            name, dtype, value, isActive
+        }))
+    : [];
 
         const model = await Models.create({
             model_name,
@@ -200,9 +204,13 @@ export const updateModel = async (req, res) => {
 
         // Validate model_attributes shape: [{ name, dtype }]
         if (model_attributes) {
-            updateFields.model_attributes = Array.isArray(model_attributes)
-                ? model_attributes.filter((a) => a?.name && a?.dtype)
-                : [];
+           updateFields.model_attributes = Array.isArray(model_attributes)
+    ? model_attributes
+        .filter((a) => a?.name && a?.dtype)
+        .map(({ name, dtype, value = "", isActive = true }) => ({
+            name, dtype, value, isActive
+        }))
+    : [];
         }
 
         const updatedModel = await Models.findByIdAndUpdate(
