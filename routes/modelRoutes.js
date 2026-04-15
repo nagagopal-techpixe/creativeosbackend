@@ -11,11 +11,11 @@ import { protectAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/",                        protectAdmin, createModel);
-router.get("/",                         protectAdmin, getAllModels);
-router.get("/:id",                      protectAdmin, getModelById);
-router.get("/category/:categoryId",     protectAdmin, getModelsByCategory);
-router.patch("/:id",                    protectAdmin, updateModel);
-router.delete("/:id",                   protectAdmin, deleteModel);
+router.post("/",                    createModel);
+router.get("/",                      getAllModels);
+router.get("/:id",                       getModelById);
+router.get("/category/:categoryId",      getModelsByCategory);
+router.patch("/:id",                     updateModel);
+router.delete("/:id",                 deleteModel);
 
 export default router;
