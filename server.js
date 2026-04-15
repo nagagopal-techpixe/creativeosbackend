@@ -17,6 +17,7 @@ import YAML from "yamljs";
 import Category from "./routes/categoryRoutes.js";
 import Models from "./routes/modelRoutes.js";
 import runRoutes from "./routes/runRoutes.js";
+import loaderRoutes from "./routes/LoaderRoutes.js";
 dotenv.config();
 connectDB();
 
@@ -41,6 +42,8 @@ app.use("/api/user", userRoutes);
 app.use("/api/admin/categories", Category);
 app.use("/api/admin/models", Models)  ;
 app.use("/api/admin/run", runRoutes);
+app.use("/api/admin/loader", loaderRoutes);
+
 const swaggerDocument = YAML.load("./docs/swagger.yaml");
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
