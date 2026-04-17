@@ -1,5 +1,5 @@
 import VoiceBuilder from "../../models/VoiceBuilder.js";
-import User from "../../models/UserModel/User.js";
+import User from "../../models/Usermodel/User.js";
 
 const getVoiceBuilder = async (res) => {
   const doc = await VoiceBuilder.findOne();

@@ -1,5 +1,5 @@
 import StoryboardBuilder from "../../models/StoryboardBuilder.js";
-import User from "../../models/UserModel/User.js";
+import User from "../../models/Usermodel/User.js";
 
 const getBuilder = async (res) => {
   const doc = await StoryboardBuilder.findOne();

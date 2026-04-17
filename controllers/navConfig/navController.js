@@ -1,5 +1,5 @@
 import NavConfig from "../../models/NavConfig.js";
-import User     from "../../models/UserModel/User.js";
+import User     from "../../models/Usermodel/User.js";
 
 // ── HELPER — get doc
 const getNavConfig = async (res) => {

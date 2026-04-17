@@ -1,5 +1,5 @@
 import CharacterBuilder from "../../models/CharacterBuilder.js";
-import User from "../../models/UserModel/User.js";
+import User from "../../models/Usermodel/User.js";
 
 const getCharacterBuilder = async (res) => {
   const doc = await CharacterBuilder.findOne();

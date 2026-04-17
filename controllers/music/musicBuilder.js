@@ -1,5 +1,5 @@
 import MusicBuilder from "../../models/MusicBuilder.js";
-import User from "../../models/UserModel/User.js";
+import User from "../../models/Usermodel/User.js";
 
 const getMusicBuilder = async (res) => {
   const doc = await MusicBuilder.findOne();

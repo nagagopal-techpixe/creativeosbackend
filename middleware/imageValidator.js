@@ -1,92 +1,97 @@
 import path from "path";
 import multer from "multer";
 
-// ─── Constants ─────────────
+// ─── Allowed types ──────────────────────────────────────────────────────────
 
-const ALLOWED_IMAGE_MIMES = ["image/jpeg", "image/jpg", "image/png"];
-const ALLOWED_IMAGE_EXTS  = [".jpg", ".jpeg", ".png"];
+const ALLOWED = {
+  image: {
+    mimes: ["image/jpeg", "image/jpg", "image/png", "image/webp"],
+    exts:  [".jpg", ".jpeg", ".png", ".webp"],
+    maxSizeMB: 10,
+  },
+  video: {
+    mimes: ["video/mp4", "video/mov", "video/quicktime", "video/webm"],
+    exts:  [".mp4", ".mov", ".webm"],
+    maxSizeMB: 200,
+  },
+  audio: {
+    mimes: ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/x-wav"],
+    exts:  [".mp3", ".wav", ".ogg"],
+    maxSizeMB: 50,
+  },
+}
 
-const ALLOWED_VIDEO_MIMES = ["video/mp4"];
-const ALLOWED_VIDEO_EXTS  = [".mp4"];
+// ─── Detect type from file ──────────────────────────────────────────────────
 
-// ─── Storage ───────────────
+export const detectFileType = (file) => {
+  const ext  = path.extname(file.originalname).toLowerCase()
+  const mime = file.mimetype.toLowerCase()
 
-const storage = multer.memoryStorage();
+  for (const [type, config] of Object.entries(ALLOWED)) {
+    if (config.exts.includes(ext) && config.mimes.includes(mime)) {
+      return type
+    }
+  }
+  return null
+}
 
-// ─── File Filter ───────────
+// ─── File filter ────────────────────────────────────────────────────────────
 
 const fileFilter = (req, file, cb) => {
-    const ext  = path.extname(file.originalname).toLowerCase();
-    const mime = file.mimetype.toLowerCase();
+  const type = detectFileType(file)
+  if (!type) {
+    return cb(
+      new Error(
+        `Invalid file type "${path.extname(file.originalname)}". ` +
+        `Allowed — Images: .jpg .png .webp | Videos: .mp4 .mov .webm | Audio: .mp3 .wav .ogg`
+      ),
+      false
+    )
+  }
+  cb(null, true)
+}
 
-    // Check image
-    if (ALLOWED_IMAGE_EXTS.includes(ext) && ALLOWED_IMAGE_MIMES.includes(mime)) {
-        return cb(null, true); //  valid image
-    }
+// ─── Single loader upload (for /upload-loader route) ────────────────────────
 
-    // Check video
-    if (ALLOWED_VIDEO_EXTS.includes(ext) && ALLOWED_VIDEO_MIMES.includes(mime)) {
-        return cb(null, true); //  valid video
-    }
+export const loaderUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB hard cap (video is largest)
+}).single("file")
 
-    //  reject anything else
-    cb(
-        new Error(
-            `Invalid file type "${ext}". Images: ${ALLOWED_IMAGE_EXTS.join(", ")} | Videos: ${ALLOWED_VIDEO_EXTS.join(", ")}`
-        ),
-        false
-    );
-};
-
-// ─── Dynamic Upload Handler 
+// ─── Dynamic upload for model runner ────────────────────────────────────────
 
 export const handleImageUpload = (req, res, next) => {
-    const attributes = req.model.model_attributes ?? [];
+  const attributes = req.model?.model_attributes ?? []
 
-    const imageFields = attributes.filter((attr) => attr.dtype === "image");
-    const videoFields = attributes.filter((attr) => attr.dtype === "video");
-    const audioFields = attributes.filter((attr) => attr.dtype === "audio");
+  const fields = ["image", "video", "audio"].flatMap((dtype) =>
+    attributes
+      .filter((attr) => attr.dtype === dtype)
+      .map((attr) => ({ name: attr.name, maxCount: 10 }))
+  )
 
-    // ✅ Always run multer to parse req.body (text fields)
-    // Just skip file fields if there are none
-    const fields = [
-        ...imageFields.map((attr) => ({ name: attr.name, maxCount: 10 })),
-        ...videoFields.map((attr) => ({ name: attr.name, maxCount: 10 })),
-        ...audioFields.map((attr) => ({ name: attr.name, maxCount: 10 })),
-    ]
+  const upload = fields.length === 0
+    ? multer({ storage: multer.memoryStorage() }).none()
+    : multer({ storage: multer.memoryStorage(), fileFilter }).fields(fields)
 
-    // Use .any() for text-only models, .fields() when file fields exist
-    const upload = fields.length === 0
-        ? multer({ storage }).none()          // ✅ parses body, no files expected
-        : multer({ storage, fileFilter }).fields(fields)
-
-    upload(req, res, (err) => {
-        if (err instanceof multer.MulterError) {
-            return res.status(400).json({
-                success:    false,
-                message:    multerErrorMessage(err),
-                statuscode: 400,
-            })
-        }
-        if (err) {
-            return res.status(400).json({
-                success:    false,
-                message:    err.message,
-                statuscode: 400,
-            })
-        }
-        next()
-    })
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ success: false, message: multerErrorMessage(err) })
+    }
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message })
+    }
+    next()
+  })
 }
-// ─── Multer Error Messages ─
+
+// ─── Multer error messages ───────────────────────────────────────────────────
 
 const multerErrorMessage = (err) => {
-    switch (err.code) {
-        case "LIMIT_FILE_COUNT":
-            return `Too many files for field "${err.field}"`;
-        case "LIMIT_UNEXPECTED_FILE":
-            return `Unexpected field "${err.field}"`;
-        default:
-            return `Upload error: ${err.message}`;
-    }
-};
+  switch (err.code) {
+    case "LIMIT_FILE_SIZE":    return `File too large. Max size exceeded.`
+    case "LIMIT_FILE_COUNT":   return `Too many files for field "${err.field}"`
+    case "LIMIT_UNEXPECTED_FILE": return `Unexpected field "${err.field}"`
+    default: return `Upload error: ${err.message}`
+  }
+}

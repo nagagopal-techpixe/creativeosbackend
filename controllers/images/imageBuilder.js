@@ -1,5 +1,5 @@
 import ImageBuilder from "../../models/ImageBuilder.js";
-import User from "../../models/UserModel/User.js";
+import User from "../../models/Usermodel/User.js";
 
 const getImageBuilder = async (res) => {
   const doc = await ImageBuilder.findOne();

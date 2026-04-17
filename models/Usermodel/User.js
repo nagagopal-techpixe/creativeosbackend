@@ -1,4 +1,4 @@
-// models/UserModel/User.js
+// models/Usermodel/User.js
 import mongoose from "mongoose";
 
 const sectionPermSchema = new mongoose.Schema({
@@ -60,7 +60,7 @@ storyboardBuilder: {
   presets: { type: sectionPermSchema, default: () => ({}) },
   details: detailsPermSchema,
 },
-// models/UserModel/User.js — add inside permissions
+// models/Usermodel/User.js — add inside permissions
 imageBuilder: {
   tabs:              { type: sectionPermSchema, default: () => ({}) },
    categories:        detailsPermSchema,
