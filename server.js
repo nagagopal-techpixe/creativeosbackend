@@ -18,6 +18,10 @@ import Category from "./routes/categoryRoutes.js";
 import Models from "./routes/modelRoutes.js";
 import runRoutes from "./routes/runRoutes.js";
 import loaderRoutes from "./routes/LoaderRoutes.js";
+<<<<<<< HEAD
+=======
+import projectsRoutes from "./routes/Projectrouter.js";
+>>>>>>> 449d9d72bc39e25d37b2d67abf6e84ba4e39aca0
 dotenv.config();
 connectDB();
 
@@ -43,6 +47,8 @@ app.use("/api/admin/categories", Category);
 app.use("/api/admin/models", Models)  ;
 app.use("/api/admin/run", runRoutes);
 app.use("/api/admin/loader", loaderRoutes);
+app.use("/api/admin/projects", projectsRoutes);
+
 
 const swaggerDocument = YAML.load("./docs/swagger.yaml");
 

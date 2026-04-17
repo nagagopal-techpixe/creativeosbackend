@@ -1,6 +1,6 @@
 
-import User             from "../../models/UserModel/User.js";
-import Admin            from "../../models/Adminmodel/Admin.js";
+import User             from "../../models/Usermodel/User.js";
+import Admin            from "../../models/AdminModel/Admin.js";
 import bcrypt           from "bcryptjs";
 import crypto           from "crypto";
 import { sendWelcomeEmail } from "../../utils/sendEmail.js";
@@ -13,7 +13,7 @@ import StoryboardBuilder from "../../models/StoryboardBuilder.js";
 import ImageBuilder      from "../../models/ImageBuilder.js";
 import NavConfig         from "../../models/NavConfig.js";
 
-import { buildDefaultPermissions } from "../../utils/buildDefaultPermissions.js";
+import { buildDefaultPermissions } from "../../utils/Builddefaultpermissions.js";
 
 export const createUser = async (req, res) => {
   const { name, email } = req.body;

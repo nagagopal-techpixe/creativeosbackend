@@ -1,20 +1,25 @@
-// routes/imageLoaderRoutes.js
-
 import express from "express";
-import { uploadImage } from "../controllers/LoaderController.js";
+import { uploadLoader } from "../controllers/LoaderController.js";
 import { protectUser } from "../middleware/authMiddleware.js";
+import { loaderUpload } from "../middleware/imageValidator.js";
 import multer from "multer";
-
 const router = express.Router();
 
-// simple multer (only image loader)
-const upload = multer({ storage: multer.memoryStorage() });
+// ─── Middleware to handle multer errors gracefully ───────────────────────────
 
-router.post(
-  "/upload-image",
-  protectUser,
-  upload.fields([{ name: "image", maxCount: 1 }]),
-  uploadImage
-);
+const handleLoaderUpload = (req, res, next) => {
+  loaderUpload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ success: false, message: err.message })
+    }
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message })
+    }
+    next()
+  })
+}
+
+// POST /api/loader/upload  →  field name must be "file"
+router.post("/upload", protectUser, handleLoaderUpload, uploadLoader);
 
 export default router;

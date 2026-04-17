@@ -1,5 +1,5 @@
 import VideoBuilder from "../../models/VideoBuilder.js";
-import User from "../../models/UserModel/User.js";
+import User from "../../models/Usermodel/User.js";
 
 const getVideoBuilder = async (res) => {
   const doc = await VideoBuilder.findOne();

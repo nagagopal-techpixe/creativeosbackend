@@ -7,7 +7,7 @@ import {
     updateModel,
     deleteModel      
 } from "../controllers/modelcontroller.js";
-import { protectAdmin } from "../middleware/authMiddleware.js";
+
 
 const router = express.Router();
 

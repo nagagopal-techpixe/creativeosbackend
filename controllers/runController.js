@@ -51,6 +51,8 @@ for (const attr of attributes) {
         const runData = await RunData.create({
             model:  model._id,
             inputs,
+              userId:    req.user?._id,      
+  projectId: req.body.projectId,
         });
 
         const populated = await runData.populate("model", "model_name category");
