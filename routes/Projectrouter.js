@@ -7,6 +7,7 @@ import {
     saveCanvasState,
     deleteProject
 } from "../controllers/project/project.js";
+import { runnodes } from "../controllers/project/runproject.js";
 import { protectUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -18,5 +19,6 @@ router.get("/:id",                      protectUser, getProjectById);
 router.patch("/:id/name",               protectUser, updateProjectName);
 router.patch("/:id/canvas",             protectUser, saveCanvasState);
 router.delete("/:id",                   protectUser, deleteProject);
+router.post("/run-models",protectUser,runnodes)
 
 export default router;
