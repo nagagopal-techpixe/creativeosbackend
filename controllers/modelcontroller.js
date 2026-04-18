@@ -4,12 +4,12 @@ import Category from "../models/categories.js";
 // POST - Create a new model
 export const createModel = async (req, res) => {
     try {
-        const { model_name, category, link, model_attributes } = req.body;
+        const { model_name, category, link, model_attributes, provider, isActive } = req.body;
 
-        if (!model_name || !category || !link) {
+        if (!model_name || !category || !link || !provider) {
             return res.status(400).json({
                 success: false,
-                message: "model_name, category and link are required",
+                message: "model_name, category, link and provider are required",
                 statuscode: 400
             });
         }
@@ -32,18 +32,19 @@ export const createModel = async (req, res) => {
             });
         }
 
-        // Validate model_attributes shape: [{ name, dtype }]
-       const attrs = Array.isArray(model_attributes)
-    ? model_attributes
-        .filter((a) => a?.name && a?.dtype)
-        .map(({ name, dtype, value = "", isActive = true }) => ({
-            name, dtype, value, isActive
-        }))
-    : [];
+        const attrs = Array.isArray(model_attributes)
+            ? model_attributes
+                .filter((a) => a?.name && a?.dtype)
+                .map(({ name, dtype, value = "", isActive = true }) => ({
+                    name, dtype, value, isActive
+                }))
+            : [];
 
         const model = await Models.create({
             model_name,
             category,
+            provider,
+            isActive: isActive ?? true,
             link,
             model_attributes: attrs
         });
@@ -93,6 +94,7 @@ export const getAllModels = async (req, res) => {
     }
 };
 
+
 // GET - Fetch single model by ID
 export const getModelById = async (req, res) => {
     try {
@@ -124,6 +126,7 @@ export const getModelById = async (req, res) => {
     }
 };
 
+
 // GET - Fetch all models by category ID
 export const getModelsByCategory = async (req, res) => {
     try {
@@ -138,9 +141,9 @@ export const getModelsByCategory = async (req, res) => {
             });
         }
 
-        const models = await Models.find({ category: categoryId })
-            .populate("category", "category_name")
-            .sort({ createdAt: -1 });
+        const models = await Models.find({ category: categoryId, isActive: true })
+    .populate("category", "category_name")
+    .sort({ createdAt: -1 });
 
         return res.status(200).json({
             success: true,
@@ -160,11 +163,12 @@ export const getModelsByCategory = async (req, res) => {
     }
 };
 
+
 // PATCH - Update a model by ID
 export const updateModel = async (req, res) => {
     try {
         const { id } = req.params;
-        const { model_name, category, link, model_attributes } = req.body;
+        const { model_name, category, link, model_attributes, provider, isActive } = req.body;
 
         const model = await Models.findById(id);
         if (!model) {
@@ -198,19 +202,20 @@ export const updateModel = async (req, res) => {
         }
 
         const updateFields = {};
-        if (model_name) updateFields.model_name = model_name;
-        if (category)   updateFields.category   = category;
-        if (link)       updateFields.link        = link;
+        if (model_name)            updateFields.model_name = model_name;
+        if (category)              updateFields.category   = category;
+        if (link)                  updateFields.link       = link;
+        if (provider)              updateFields.provider   = provider;
+        if (isActive !== undefined) updateFields.isActive  = isActive;
 
-        // Validate model_attributes shape: [{ name, dtype }]
         if (model_attributes) {
-           updateFields.model_attributes = Array.isArray(model_attributes)
-    ? model_attributes
-        .filter((a) => a?.name && a?.dtype)
-        .map(({ name, dtype, value = "", isActive = true }) => ({
-            name, dtype, value, isActive
-        }))
-    : [];
+            updateFields.model_attributes = Array.isArray(model_attributes)
+                ? model_attributes
+                    .filter((a) => a?.name && a?.dtype)
+                    .map(({ name, dtype, value = "", isActive = true }) => ({
+                        name, dtype, value, isActive
+                    }))
+                : [];
         }
 
         const updatedModel = await Models.findByIdAndUpdate(

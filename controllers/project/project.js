@@ -64,7 +64,9 @@ export const createProject = async (req, res) => {
 // GET ALL PROJECTS
 export const getAllProjects = async (req, res) => {
   try {
-    const projects = await Project.find({ userId: req.user._id }).sort({ updatedAt: -1 });
+    const projects = await Project.find({ userId: req.user._id })
+      .select('name createdAt updatedAt')  // only name + dates, no canvas_state
+      .sort({ updatedAt: -1 });
     res.json({ success: true, data: projects });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
