@@ -7,7 +7,7 @@ const loaderSchema = new mongoose.Schema({
   mimetype:  { type: String },
   size:      { type: Number },
   userId:    { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project" }, // ← add this
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project"}, 
 }, { timestamps: true });
 
 // fast lookup: all loaders for a project
