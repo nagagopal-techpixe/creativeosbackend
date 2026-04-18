@@ -18,10 +18,7 @@ import Category from "./routes/categoryRoutes.js";
 import Models from "./routes/modelRoutes.js";
 import runRoutes from "./routes/runRoutes.js";
 import loaderRoutes from "./routes/LoaderRoutes.js";
-<<<<<<< HEAD
-=======
 import projectsRoutes from "./routes/Projectrouter.js";
->>>>>>> 449d9d72bc39e25d37b2d67abf6e84ba4e39aca0
 dotenv.config();
 connectDB();
 
