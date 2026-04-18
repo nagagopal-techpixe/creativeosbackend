@@ -4,14 +4,14 @@ import RunData        from "../models/runData.js";
 
 export const runModel = async (req, res) => {
 
-    console.log("req.body", req.body);
+    // console.log("req.body", req.body);
     try {
         const model      = req.model;           // attached by fetchModel middleware
         const attributes = model.model_attributes ?? [];
         const inputs     = {};
-        console.log("model",model)
-        console.log("attributes",attributes)
-        console.log("inputs",inputs)
+        // console.log("model",model)
+        // console.log("attributes",attributes)
+        // console.log("inputs",inputs)
 
 
         // ── Step 1: Handle file fields (image / video) ──────────────────
