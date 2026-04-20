@@ -1,6 +1,6 @@
 import Project from "../../models/Project.js";
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
+//  helpers 
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
@@ -24,7 +24,16 @@ const sanitizeNode = (n) => ({
   data: {
     class_type:       String(n.data?.class_type || ""),
     label:            n.data?.label            ? String(n.data.label) : undefined,
-    model_attributes: n.data?.model_attributes ?? undefined,
+   model_attributes: Array.isArray(n.data?.model_attributes)
+  ? n.data.model_attributes.map((attr) => ({
+      ...attr,
+      connectedFrom: !attr.connectedFrom
+        ? undefined
+        : Array.isArray(attr.connectedFrom)
+          ? attr.connectedFrom
+          : [attr.connectedFrom],
+    }))
+  : n.data?.model_attributes ?? undefined,
     params:           typeof n.data?.params === "object" ? n.data.params : {},
     _artifacts: Array.isArray(n.data?._artifacts)
       ? n.data._artifacts.map((a) => ({
@@ -45,7 +54,7 @@ const sanitizeEdge = (e) => ({
   targetPort: String(e.targetPort || "input"),
 });
 
-// ─── controllers ──────────────────────────────────────────────────────────────
+//  controllers 
 
 // CREATE PROJECT
 export const createProject = async (req, res) => {
