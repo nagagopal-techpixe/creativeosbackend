@@ -23,6 +23,8 @@ tags:
     description: Module permission checks for users.
   - name: Models
     description: Model management. Admin can create & update, Users can view.
+  - name: Projects
+    description: Project and canvas management.
 
 components:
   securitySchemes:
@@ -244,6 +246,37 @@ components:
           items:
             type: string
           example: ["text", "vision", "audio", "code"]
+
+    # ── Projects ──────────────────────────────────────────────
+    Project:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "69e1d80071e300cdf838e48e"
+        name:
+          type: string
+          example: "Untitled Project"
+        userId:
+          type: string
+          example: "69e0d94471e300cdf838c78c"
+        canvas_state:
+          type: object
+          properties:
+            nodes:
+              type: array
+              items:
+                type: object
+            edges:
+              type: array
+              items:
+                type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     # ── Shared ────────────────────────────────────────────────
     SuccessResponse:
@@ -1322,3 +1355,190 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  
+  /api/admin/projects:
+    get:
+      summary: Get all projects for the logged-in user
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+    post:
+      summary: Create a new project
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "My New Project"
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+  /api/admin/projects/{id}:
+    get:
+      summary: Get project by ID
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+    delete:
+      summary: Delete project
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project deleted successfully
+
+  /api/admin/projects/{id}/name:
+    patch:
+      summary: Update project name
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Name updated successfully
+
+  /api/admin/projects/{id}/canvas:
+    patch:
+      summary: Save canvas state (nodes and edges)
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nodes, edges]
+              properties:
+                nodes:
+                  type: array
+                  items:
+                    type: object
+                edges:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Canvas saved successfully
+
+  /api/admin/projects/run-models:
+    post:
+      summary: Execute an AI model node in a project
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      description: >
+        Triggers the AI model execution for a specific node in a project.
+        Extracts the input from the node's canvas state and calls the appropriate AI adapter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectid, nodeid]
+              properties:
+                projectid:
+                  type: string
+                  description: MongoDB ObjectId of the project
+                  example: "69e1d80071e300cdf838e48e"
+                nodeid:
+                  type: string
+                  description: Unique ID of the node within the canvas
+                  example: "node-1776408604276"
+      responses:
+        '200':
+          description: AI Execution Successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: Raw response from the AI provider
+        '400':
+          description: Projectid is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project or Node not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
