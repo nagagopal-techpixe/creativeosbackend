@@ -15,12 +15,10 @@ export const runModelAdapter = async (model, inputs) => {
     }
 
     switch (model.provider) {
-        case "chatGpt":
-            return await OpenAIAdapter.generate(model, inputs);
-        case "Gemini":
-            return await GeminiAdapter.generate(model, inputs);
         case "replicate":
             return await ReplicateAdapter.generate(model, inputs);
+        case "Gemini":
+            return await GeminiAdapter.generate(model, inputs);
         default:
             throw new Error(`No Adapter Found for provider: ${model.provider}`);
     }

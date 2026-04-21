@@ -49,7 +49,9 @@ const GeminiAdapter = {
                 throw new Error(`Gemini API Error: ${response.status} - ${JSON.stringify(error)}`);
             }
 
-            return await response.json();
+            const result = await response.json();
+            // Extract the text from the first candidate's first part
+            return result.candidates?.[0]?.content?.parts?.[0]?.text || JSON.stringify(result);
         } catch (error) {
             console.error("Gemini Adapter Generate Error:", error);
             throw error;

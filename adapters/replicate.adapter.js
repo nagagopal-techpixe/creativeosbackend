@@ -26,6 +26,7 @@ const ReplicateAdapter = {
         };
 
         try {
+            //console.log("Replicate Request Body:", JSON.stringify(body, null, 2));
             const response = await fetch(url, {
                 method: "POST",
                 headers,
@@ -53,7 +54,10 @@ const ReplicateAdapter = {
                     throw new Error(`Replicate prediction failed: ${result.error || "Unknown error"}`);
                 }
             }
-            return result;
+            // Join the output if it's an array (typical for text models on Replicate)
+            const output = result?.data?.output ?? result?.output;
+            //console.log(output)
+            return Array.isArray(output) ? output.join('') : output;
         } catch (error) {
             console.error("Replicate Adapter Generate Error:", error);
             throw error;
