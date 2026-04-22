@@ -37,7 +37,7 @@ const sanitizeNode = (n) => ({
     params:           typeof n.data?.params === "object" ? n.data.params : {},
     _artifacts: Array.isArray(n.data?._artifacts)
       ? n.data._artifacts.map((a) => ({
-          url:  String(a?.url  || ""),
+                data: String(a?.data || a?.url || ''),
           type: String(a?.type || "image"),
         }))
       : [],
