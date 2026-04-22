@@ -43,12 +43,12 @@ export const runnodes = async (req, res) => {
             for (let i = 0; i < inputs.length; i++) {
                 const attr = inputs[i];
                 if (!attr) continue;
-                
+
                 // // USER REQUIREMENT: Include all 6 attributes.
                 // // We include them if they have a value or a connection.
                 // const hasValue = attr.value !== undefined && attr.value !== null && attr.value !== "";
                 // const hasConnection = attr.connectedFrom && (Array.isArray(attr.connectedFrom) ? attr.connectedFrom.length > 0 : true);
-                
+
                 // if (!hasValue && !hasConnection) {
                 //     console.log(`Skipping attribute ${attr?.name}: no value and no connection`);
                 //     continue;
@@ -57,10 +57,32 @@ export const runnodes = async (req, res) => {
 
 
                 if (attr.dtype === "string" && (attr.name === "prompt" || attr.name === "messages")) {
-                    content.push({
-                        type: "text",
-                        text: attr.value
-                    });
+                    if(attr.value){
+                        content.push({
+                            type: "text",
+                            text: attr.value
+                        });
+                   }else if(attr.connectedFrom){
+                      const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom]
+
+                      for(const conn of connections) {
+                         const connectedNodeId = conn.nodeId 
+                         if(!connectedNodeId) continue 
+
+                         const connectedNode = getproject_details.canvas_state.nodes.find(n => n.id === connectedNodeId)
+                         let data 
+                         const artifacts = connectedNode?.data?._artifacts
+                         if(artifacts && artifacts.length > 0){
+                            const lastArtifact = artifacts[artifacts.length - 1]
+                            data = lastArtifact.url || lastArtifact.data
+                            content.push({
+                                type: "text",
+                                text: data
+                            })
+                         }
+                      }
+                      
+                   }
                 }
 
                 else if (attr.dtype === "image" || attr.name === "image_input" || attr.dtype === "image_url") {
@@ -73,7 +95,14 @@ export const runnodes = async (req, res) => {
                             if (!connectedNodeId) continue;
 
                             const connectedNode = getproject_details.canvas_state.nodes.find(n => n.id === connectedNodeId);
-                            const imageUrl = connectedNode?.data?.params?.source;
+                            let imageUrl = connectedNode?.data?.params?.source;
+                            
+                            // Check artifacts if params.source is empty (e.g. for AI generated images)
+                            const artifacts = connectedNode?.data?._artifacts;
+                            if (!imageUrl && artifacts && artifacts.length > 0) {
+                                const lastArtifact = artifacts[artifacts.length - 1];
+                                imageUrl = lastArtifact.url || lastArtifact.data;
+                            }
 
                             if (imageUrl) {
                                 content.push({
@@ -157,9 +186,146 @@ export const runnodes = async (req, res) => {
                 message: "AI Execution Successful",
                 data: response
             });
+        } else if(projectid) {
+            const project_details = await Project.findById(projectid) 
+
+            if(!project_details){
+                return res.status(404).json({
+                    success: false,
+                    statuscode: 404,
+                    message: "Project not found"
+                })
+            }
+            
+            const nodes = project_details.canvas_state.nodes
+            const SKIP_TYPES = ["LoadImage", "LoadVideo", "LoadAudio"];
+            for(let i = 0; i < nodes.length; i++){
+                const node = nodes[i] 
+                if(SKIP_TYPES.includes(node.data.class_type)) continue 
+                const inputs = node.data.model_attributes || [] 
+                let content = [] 
+                let directInput = {} 
+
+                for (let j = 0; j < inputs.length; j++) {
+                    const attr = inputs[j];
+                    if (!attr) continue;
+                    if (attr.dtype === "string" && (attr.name === "prompt" || attr.name === "messages")) {
+                        if (attr.value) {
+                            content.push({
+                                type: "text",
+                                text: attr.value
+                            })
+                        } else if (attr.connectedFrom) {
+                            const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom]
+
+                            for (const conn of connections) {
+                                const connectedNodeId = conn.nodeId
+                                if (!connectedNodeId) continue
+
+                                const connectedNode = project_details.canvas_state.nodes.find(n => n.id === connectedNodeId)
+                                let data
+                                const artifacts = connectedNode?.data?._artifacts
+                                if (artifacts && artifacts.length > 0) {
+                                    const lastArtifact = artifacts[artifacts.length - 1]
+                                    data = lastArtifact.url || lastArtifact.data
+                                    content.push({
+                                        type: "text",
+                                        text: data
+                                    })
+                                }
+                            }
+                        }
+                    }
+                    else if (attr.dtype === "image" || attr.name === "image_input" || attr.dtype === "image_url") {
+                        if (attr.connectedFrom) {
+                            const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom]
+
+                            for (const conn of connections) {
+                                const connectedNodeId = conn.nodeId
+                                if (!connectedNodeId) continue
+
+                                const connectedNode = project_details.canvas_state.nodes.find(n => n.id === connectedNodeId)
+                                let image_url = connectedNode?.data?.params?.source
+
+                                const artifacts = connectedNode?.data?._artifacts
+                                if (!image_url && artifacts && artifacts.length > 0) {
+                                    const lastArtifact = artifacts[artifacts.length - 1]
+                                    image_url = lastArtifact.url || lastArtifact.data
+                                }
+
+                                if (image_url) {
+                                    content.push({
+                                        type: "image_url",
+                                        image_url: { url: image_url }
+                                    })
+                                }
+                            }
+                        }
+                    }
+
+                    else if (attr.dtype === "integer") {
+                        directInput[attr.name] = parseInt(attr.value);
+                    }
+                    else if (attr.dtype === "float") {
+                        directInput[attr.name] = parseFloat(attr.value);
+                    }
+                    else if (attr.dtype === "boolean") {
+                        directInput[attr.name] = (attr.value === "true" || attr.value === true);
+                    }
+                    else if (attr.dtype === "string") {
+                        directInput[attr.name] = attr.value;
+                    }
+
+                }
+
+                let messages = [{
+                    role: "user",
+                    content
+                }]
+
+                const finalInput = {
+                    messages,
+                    ...directInput
+                }
+
+                const modelid = node.data.modelId
+                const getmodel = await Model.findById(modelid)
+
+                if (!getmodel) {
+                    continue; // Skip nodes with missing models in batch run, or handle as error
+                }
+
+                const response = await runModelAdapter(getmodel, finalInput)
+
+                if (response) {
+                    const nodeIndex = project_details.canvas_state.nodes.findIndex(n => n.id === node.id);
+
+                    if (nodeIndex !== -1) {
+                        if (!project_details.canvas_state.nodes[nodeIndex].data) {
+                            project_details.canvas_state.nodes[nodeIndex].data = {}
+                        }
+                        if (!project_details.canvas_state.nodes[nodeIndex].data._artifacts) {
+                            project_details.canvas_state.nodes[nodeIndex].data._artifacts = [];
+                        }
+
+                        project_details.canvas_state.nodes[nodeIndex].data._artifacts.push({
+                            type: "text",
+                            data: typeof response === 'string' ? response : JSON.stringify(response)
+                        });
+
+                        // Explicitly mark the path as modified to ensure Mongoose saves the nested change
+                        project_details.markModified('canvas_state.nodes');
+                        await project_details.save();
+                    }
+                }
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Project nodes executed successfully"
+            });
+
         }
-
-
 
     } catch (error) {
         return res.status(500).json({
