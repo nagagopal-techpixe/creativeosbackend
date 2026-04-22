@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const artifactSchema = new mongoose.Schema(
-  { url: String, type: String },
+  { data: String, type: String },
   { _id: false }
 );
 
