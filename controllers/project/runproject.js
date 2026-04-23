@@ -44,50 +44,49 @@ export const runnodes = async (req, res) => {
                 const attr = inputs[i];
                 if (!attr) continue;
 
-                // // USER REQUIREMENT: Include all 6 attributes.
-                // // We include them if they have a value or a connection.
-                // const hasValue = attr.value !== undefined && attr.value !== null && attr.value !== "";
-                // const hasConnection = attr.connectedFrom && (Array.isArray(attr.connectedFrom) ? attr.connectedFrom.length > 0 : true);
-
-                // if (!hasValue && !hasConnection) {
-                //     console.log(`Skipping attribute ${attr?.name}: no value and no connection`);
-                //     continue;
-                // }
-                // //console.log(`Processing attribute ${attr?.name} (dtype: ${attr?.dtype})`);
 
 
-                if (attr.dtype === "string" && (attr.name === "prompt" || attr.name === "messages")) {
-                    if(attr.value){
+                if ((attr.dtype === "string" || attr.dtype === "array") && (attr.name === "prompt" || attr.name === "messages")) {
+                    if (attr.value) {
                         content.push({
                             type: "text",
                             text: attr.value
                         });
-                   }else if(attr.connectedFrom){
-                      const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom]
+                    }
 
-                      for(const conn of connections) {
-                         const connectedNodeId = conn.nodeId 
-                         if(!connectedNodeId) continue 
+                    if (attr.connectedFrom) {
+                        const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom];
 
-                         const connectedNode = getproject_details.canvas_state.nodes.find(n => n.id === connectedNodeId)
-                         let data 
-                         const artifacts = connectedNode?.data?._artifacts
-                         if(artifacts && artifacts.length > 0){
-                            const lastArtifact = artifacts[artifacts.length - 1]
-                            data = lastArtifact.url || lastArtifact.data
-                            content.push({
-                                type: "text",
-                                text: data
-                            })
-                         }
-                      }
-                      
-                   }
+                        for (const conn of connections) {
+                            const connectedNodeId = conn.nodeId;
+                            if (!connectedNodeId) continue;
+
+                            const connectedNode = getproject_details.canvas_state.nodes.find(n => n.id === connectedNodeId);
+                            const artifacts = connectedNode?.data?._artifacts;
+                            if (artifacts && artifacts.length > 0) {
+                                const lastArtifact = artifacts[artifacts.length - 1];
+                                const data = lastArtifact.url || lastArtifact.data;
+                                if (data) {
+                                    content.push({
+                                        type: "text",
+                                        text: data
+                                    });
+                                }
+                            }
+                        }
+                    }
                 }
 
                 else if (attr.dtype === "image" || attr.name === "image_input" || attr.dtype === "image_url") {
+                    // Check direct value if present
+                    if (attr.value) {
+                        content.push({
+                            type: "image_url",
+                            image_url: { url: attr.value }
+                        });
+                    }
+
                     if (attr.connectedFrom) {
-                        // Handle both single connection object or array of connections
                         const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom];
 
                         for (const conn of connections) {
@@ -96,8 +95,7 @@ export const runnodes = async (req, res) => {
 
                             const connectedNode = getproject_details.canvas_state.nodes.find(n => n.id === connectedNodeId);
                             let imageUrl = connectedNode?.data?.params?.source;
-                            
-                            // Check artifacts if params.source is empty (e.g. for AI generated images)
+
                             const artifacts = connectedNode?.data?._artifacts;
                             if (!imageUrl && artifacts && artifacts.length > 0) {
                                 const lastArtifact = artifacts[artifacts.length - 1];
@@ -123,10 +121,12 @@ export const runnodes = async (req, res) => {
                 else if (attr.dtype === "boolean") {
                     directInput[attr.name] = (attr.value === "true" || attr.value === true);
                 }
-                else if (attr.dtype === "string") {
+                else if (attr.dtype === "string" || attr.dtype === "array") {
                     directInput[attr.name] = attr.value;
                 }
             }
+
+
             //console.log(content)
 
             let messages = [{
@@ -152,7 +152,7 @@ export const runnodes = async (req, res) => {
                 })
             }
 
-            //console.log("Final Input to Adapter:", JSON.stringify(finalInput, null, 2));
+            console.log("Final Input to Adapter:", JSON.stringify(finalInput, null, 2));
             // Call the AI model adapter
             const response = await runModelAdapter(getmodel, finalInput);
 
@@ -186,78 +186,91 @@ export const runnodes = async (req, res) => {
                 message: "AI Execution Successful",
                 data: response
             });
-        } else if(projectid) {
-            const project_details = await Project.findById(projectid) 
+        } else if (projectid) {
+            const project_details = await Project.findById(projectid)
 
-            if(!project_details){
+            if (!project_details) {
                 return res.status(404).json({
                     success: false,
                     statuscode: 404,
                     message: "Project not found"
                 })
             }
-            
+
             const nodes = project_details.canvas_state.nodes
             const SKIP_TYPES = ["LoadImage", "LoadVideo", "LoadAudio"];
-            for(let i = 0; i < nodes.length; i++){
-                const node = nodes[i] 
-                if(SKIP_TYPES.includes(node.data.class_type)) continue 
-                const inputs = node.data.model_attributes || [] 
-                let content = [] 
-                let directInput = {} 
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i]
+                if (SKIP_TYPES.includes(node.data.class_type)) continue
+                const inputs = node.data.model_attributes || []
+                let content = []
+                let directInput = {}
 
                 for (let j = 0; j < inputs.length; j++) {
                     const attr = inputs[j];
                     if (!attr) continue;
-                    if (attr.dtype === "string" && (attr.name === "prompt" || attr.name === "messages")) {
+
+
+
+                    if ((attr.dtype === "string" || attr.dtype === "array") && (attr.name === "prompt" || attr.name === "messages")) {
                         if (attr.value) {
                             content.push({
                                 type: "text",
                                 text: attr.value
-                            })
-                        } else if (attr.connectedFrom) {
-                            const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom]
+                            });
+                        }
+
+                        if (attr.connectedFrom) {
+                            const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom];
 
                             for (const conn of connections) {
-                                const connectedNodeId = conn.nodeId
-                                if (!connectedNodeId) continue
+                                const connectedNodeId = conn.nodeId;
+                                if (!connectedNodeId) continue;
 
-                                const connectedNode = project_details.canvas_state.nodes.find(n => n.id === connectedNodeId)
-                                let data
-                                const artifacts = connectedNode?.data?._artifacts
+                                const connectedNode = project_details.canvas_state.nodes.find(n => n.id === connectedNodeId);
+                                const artifacts = connectedNode?.data?._artifacts;
                                 if (artifacts && artifacts.length > 0) {
-                                    const lastArtifact = artifacts[artifacts.length - 1]
-                                    data = lastArtifact.url || lastArtifact.data
-                                    content.push({
-                                        type: "text",
-                                        text: data
-                                    })
+                                    const lastArtifact = artifacts[artifacts.length - 1];
+                                    const data = lastArtifact.url || lastArtifact.data;
+                                    if (data) {
+                                        content.push({
+                                            type: "text",
+                                            text: data
+                                        });
+                                    }
                                 }
                             }
                         }
                     }
                     else if (attr.dtype === "image" || attr.name === "image_input" || attr.dtype === "image_url") {
+                        if (attr.value) {
+                            content.push({
+                                type: "image_url",
+                                image_url: { url: attr.value }
+                            });
+                        }
+
                         if (attr.connectedFrom) {
-                            const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom]
+                            const connections = Array.isArray(attr.connectedFrom) ? attr.connectedFrom : [attr.connectedFrom];
 
                             for (const conn of connections) {
-                                const connectedNodeId = conn.nodeId
-                                if (!connectedNodeId) continue
+                                const connectedNodeId = conn.nodeId;
+                                if (!connectedNodeId) continue;
 
-                                const connectedNode = project_details.canvas_state.nodes.find(n => n.id === connectedNodeId)
-                                let image_url = connectedNode?.data?.params?.source
+                                const connectedNode = project_details.canvas_state.nodes.find(n => n.id === connectedNodeId);
+                                let image_url = connectedNode?.data?.params?.source;
 
-                                const artifacts = connectedNode?.data?._artifacts
+                                const artifacts = connectedNode?.data?._artifacts;
                                 if (!image_url && artifacts && artifacts.length > 0) {
-                                    const lastArtifact = artifacts[artifacts.length - 1]
-                                    image_url = lastArtifact.url || lastArtifact.data
+                                    const lastArtifact = artifacts[artifacts.length - 1];
+                                    image_url = lastArtifact.url || lastArtifact.data;
                                 }
 
                                 if (image_url) {
                                     content.push({
                                         type: "image_url",
                                         image_url: { url: image_url }
-                                    })
+                                    });
                                 }
                             }
                         }
@@ -272,7 +285,7 @@ export const runnodes = async (req, res) => {
                     else if (attr.dtype === "boolean") {
                         directInput[attr.name] = (attr.value === "true" || attr.value === true);
                     }
-                    else if (attr.dtype === "string") {
+                    else if (attr.dtype === "string" || attr.dtype === "array") {
                         directInput[attr.name] = attr.value;
                     }
 
