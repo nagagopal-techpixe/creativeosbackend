@@ -170,10 +170,17 @@ export const runnodes = async (req, res) => {
                     }
 
                     // Push the new artifact
-                    getproject_details.canvas_state.nodes[nodeIndex].data._artifacts.push({
-                        type: "text",
-                        data: typeof response === 'string' ? response : JSON.stringify(response)
-                    });
+                 const responseData = typeof response === 'string' ? response : JSON.stringify(response);
+const artifactType = responseData.match(/\.(mp4|webm|mov)/i) ? "video"
+                   : responseData.match(/\.(jpg|jpeg|png|webp)/i) ? "image"
+                   : responseData.match(/\.(wav|mp3|ogg|aac)/i) ? "audio"
+                   : "text";
+getproject_details.canvas_state.nodes[nodeIndex].data._artifacts = [];
+getproject_details.canvas_state.nodes[nodeIndex].data._artifacts.push({
+    type: artifactType,
+    data: responseData
+});
+
 
                     // Explicitly mark the path as modified to ensure Mongoose saves the nested change
                     getproject_details.markModified('canvas_state.nodes');
@@ -321,10 +328,16 @@ export const runnodes = async (req, res) => {
                             project_details.canvas_state.nodes[nodeIndex].data._artifacts = [];
                         }
 
-                        project_details.canvas_state.nodes[nodeIndex].data._artifacts.push({
-                            type: "text",
-                            data: typeof response === 'string' ? response : JSON.stringify(response)
-                        });
+                    const responseData = typeof response === 'string' ? response : JSON.stringify(response);
+const artifactType = responseData.match(/\.(mp4|webm|mov)/i) ? "video"
+                   : responseData.match(/\.(jpg|jpeg|png|webp)/i) ? "image"
+                   : responseData.match(/\.(wav|mp3|ogg|aac)/i) ? "audio"
+                   : "text";
+project_details.canvas_state.nodes[nodeIndex].data._artifacts = [];
+project_details.canvas_state.nodes[nodeIndex].data._artifacts.push({
+    type: artifactType,
+    data: responseData  
+});
 
                         // Explicitly mark the path as modified to ensure Mongoose saves the nested change
                         project_details.markModified('canvas_state.nodes');

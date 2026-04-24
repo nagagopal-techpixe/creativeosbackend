@@ -35,12 +35,14 @@ const sanitizeNode = (n) => ({
     }))
   : n.data?.model_attributes ?? undefined,
     params:           typeof n.data?.params === "object" ? n.data.params : {},
-    _artifacts: Array.isArray(n.data?._artifacts)
-      ? n.data._artifacts.map((a) => ({
-                data: String(a?.data || a?.url || ''),
-          type: String(a?.type || "image"),
-        }))
-      : [],
+
+
+_artifacts: Array.isArray(n.data?._artifacts)
+  ? n.data._artifacts.map((a) => ({
+        data: String(a?.data || a?.url || ''),
+        type: String(a?.type || "text"),  // ← change "image" to "text"
+    }))
+  : [],
     modelId: sanitizeObjectId(n.data?.modelId),
   },
 });
