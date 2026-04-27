@@ -32,13 +32,13 @@ export const createModel = async (req, res) => {
             });
         }
 
-        const attrs = Array.isArray(model_attributes)
-            ? model_attributes
-                .filter((a) => a?.name && a?.dtype)
-                .map(({ name, dtype, value = "", isActive = true }) => ({
-                    name, dtype, value, isActive
-                }))
-            : [];
+       const attrs = Array.isArray(model_attributes)
+    ? model_attributes
+        .filter((a) => a?.name && a?.dtype)
+        .map(({ name, dtype, value = "", isActive = true, maxCount = null }) => ({
+            name, dtype, value, isActive, maxCount
+        }))
+    : [];
 
         const model = await Models.create({
             model_name,
@@ -209,13 +209,13 @@ export const updateModel = async (req, res) => {
         if (isActive !== undefined) updateFields.isActive  = isActive;
 
         if (model_attributes) {
-            updateFields.model_attributes = Array.isArray(model_attributes)
-                ? model_attributes
-                    .filter((a) => a?.name && a?.dtype)
-                    .map(({ name, dtype, value = "", isActive = true }) => ({
-                        name, dtype, value, isActive
-                    }))
-                : [];
+           updateFields.model_attributes = Array.isArray(model_attributes)
+    ? model_attributes
+        .filter((a) => a?.name && a?.dtype)
+        .map(({ name, dtype, value = "", isActive = true, maxCount = null }) => ({
+            name, dtype, value, isActive, maxCount
+        }))
+    : [];
         }
 
         const updatedModel = await Models.findByIdAndUpdate(

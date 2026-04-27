@@ -1,3 +1,11 @@
 node_modules/
 dist/
+build/
 .env
+
+# Prevent zip and archive files
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz

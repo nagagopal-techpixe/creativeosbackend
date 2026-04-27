@@ -1,8 +1,36 @@
 import Project from '../../models/Project.js';
 import Model from '../../models/models.js';
 import { runModelAdapter } from '../../adapters/index.js';
+import { uploadToS3 } from '../../utils/s3Upload.js';
 
+async function saveToS3(url) {
+    try {
+        const res = await fetch(url)
+        if (!res.ok) return url
 
+        const buffer    = Buffer.from(await res.arrayBuffer())
+        const ext       = url.match(/\.(mp4|webm|mov|jpg|jpeg|png|webp|wav|mp3|ogg)/i)?.[1] || 'mp4'
+        const mimeType  = ext.match(/mp4|webm|mov/) ? `video/${ext}`
+                        : ext.match(/jpg|jpeg/)      ? 'image/jpeg'
+                        : ext.match(/png/)            ? 'image/png'
+                        : ext.match(/webp/)           ? 'image/webp'
+                        : ext.match(/wav/)            ? 'audio/wav'
+                        : ext.match(/mp3/)            ? 'audio/mpeg'
+                        : 'audio/ogg'
+        const folder    = ext.match(/mp4|webm|mov/) ? 'videos'
+                        : ext.match(/jpg|jpeg|png|webp/) ? 'images'
+                        : 'audio'
+
+        //  Use your existing uploadToS3
+        const s3Url = await uploadToS3(buffer, `output.${ext}`, mimeType, folder)
+        console.log("Saved to S3:", s3Url)
+        return s3Url
+
+    } catch (err) {
+        console.error("S3 save failed:", err)
+        return url // fallback to original URL
+    }
+}
 export const runnodes = async (req, res) => {
     try {
         const { projectid, nodeid } = req.body;
@@ -38,7 +66,7 @@ export const runnodes = async (req, res) => {
 
             const inputs = node.data.model_attributes || [];
             let content = [];
-            let directInput = {}; // ✅ for integers, floats, strings like system_prompt
+            let directInput = {}; //  for integers, floats, strings like system_prompt
 
             for (let i = 0; i < inputs.length; i++) {
                 const attr = inputs[i];
@@ -134,7 +162,7 @@ export const runnodes = async (req, res) => {
                 content
             }];
 
-            // ✅ Final input — messages + all direct fields together
+            //  Final input — messages + all direct fields together
             const finalInput = {
                 messages,
                 ...directInput
@@ -154,45 +182,47 @@ export const runnodes = async (req, res) => {
 
             console.log("Final Input to Adapter:", JSON.stringify(finalInput, null, 2));
             // Call the AI model adapter
-            const response = await runModelAdapter(getmodel, finalInput);
+          //  New
+const response = await runModelAdapter(getmodel, finalInput);
 
-            if (response) {
-                // Find the node index to ensure we are modifying the document correctly
-                const nodeIndex = getproject_details.canvas_state.nodes.findIndex(n => n.id === nodeid);
+// Save to S3 if replicate URL
+let finalResponse = response
+if (typeof response === 'string' && response.includes('replicate.delivery')) {
+    finalResponse = await saveToS3(response)
+}
 
-                if (nodeIndex !== -1) {
-                    // Initialize data and _artifacts if they don't exist
-                    if (!getproject_details.canvas_state.nodes[nodeIndex].data) {
-                        getproject_details.canvas_state.nodes[nodeIndex].data = {};
-                    }
-                    if (!getproject_details.canvas_state.nodes[nodeIndex].data._artifacts) {
-                        getproject_details.canvas_state.nodes[nodeIndex].data._artifacts = [];
-                    }
+if (finalResponse) {
+    const nodeIndex = getproject_details.canvas_state.nodes.findIndex(n => n.id === nodeid);
 
-                    // Push the new artifact
-                 const responseData = typeof response === 'string' ? response : JSON.stringify(response);
-const artifactType = responseData.match(/\.(mp4|webm|mov)/i) ? "video"
-                   : responseData.match(/\.(jpg|jpeg|png|webp)/i) ? "image"
-                   : responseData.match(/\.(wav|mp3|ogg|aac)/i) ? "audio"
-                   : "text";
-getproject_details.canvas_state.nodes[nodeIndex].data._artifacts = [];
-getproject_details.canvas_state.nodes[nodeIndex].data._artifacts.push({
-    type: artifactType,
-    data: responseData
+    if (nodeIndex !== -1) {
+        if (!getproject_details.canvas_state.nodes[nodeIndex].data) {
+            getproject_details.canvas_state.nodes[nodeIndex].data = {};
+        }
+        if (!getproject_details.canvas_state.nodes[nodeIndex].data._artifacts) {
+            getproject_details.canvas_state.nodes[nodeIndex].data._artifacts = [];
+        }
+
+        const responseData = typeof finalResponse === 'string' ? finalResponse : JSON.stringify(finalResponse);
+        const artifactType = responseData.match(/\.(mp4|webm|mov)/i) ? "video"
+                           : responseData.match(/\.(jpg|jpeg|png|webp)/i) ? "image"
+                           : responseData.match(/\.(wav|mp3|ogg|aac)/i) ? "audio"
+                           : "text";
+        getproject_details.canvas_state.nodes[nodeIndex].data._artifacts = [];
+        getproject_details.canvas_state.nodes[nodeIndex].data._artifacts.push({
+            type: artifactType,
+            data: responseData
+        });
+
+        getproject_details.markModified('canvas_state.nodes');
+        await getproject_details.save();
+    }
+}
+
+return res.status(200).json({
+    success: true,
+    message: "AI Execution Successful",
+    data: finalResponse  // ← changed
 });
-
-
-                    // Explicitly mark the path as modified to ensure Mongoose saves the nested change
-                    getproject_details.markModified('canvas_state.nodes');
-                    await getproject_details.save();
-                }
-            }
-
-            return res.status(200).json({
-                success: true,
-                message: "AI Execution Successful",
-                data: response
-            });
         } else if (projectid) {
             const project_details = await Project.findById(projectid)
 

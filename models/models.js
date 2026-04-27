@@ -29,6 +29,7 @@ const modelsSchema = new mongoose.Schema({
             dtype:    { type: String,  required: true },
             value:    { type: String,  default: "" },
             isActive: { type: Boolean, default: true },
+             maxCount: { type: Number,  default: null },    
             _id:      false
         }
     ]
