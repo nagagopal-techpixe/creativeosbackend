@@ -59,7 +59,8 @@ const ReplicateAdapter = {
         };
 
         try {
-            console.log("Replicate Request Body:", JSON.stringify(body, null, 2));
+            console.log("FINAL Replicate Input to Adapter:", JSON.stringify(inputs, null, 2));
+            //console.log("Replicate Request Body (sent to API):", JSON.stringify(body, null, 2));
             const response = await fetch(url, {
                 method: "POST",
                 headers,
