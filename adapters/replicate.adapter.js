@@ -13,9 +13,7 @@ const ReplicateAdapter = {
             throw new Error("Missing REPLICATE_API_TOKEN in .env file.");
         }
 
-        // --- Adaptation Logic ---
-        // Many Replicate image models expect a top-level 'prompt' string.
-        // If it's missing but we have 'messages', we extract the text.
+        // Step 1: Extract prompt + images from messages[].content
         if (!inputs.prompt && inputs.messages && Array.isArray(inputs.messages)) {
             let promptParts = [];
             let imageUrls = [];
@@ -38,13 +36,38 @@ const ReplicateAdapter = {
                 inputs.prompt = promptParts.join("\n\n");
             }
 
-            // If the model expects an image input and we have one, try to provide it.
-            // Note: Different Replicate models use different names (image, input_image, etc.)
-            // 'image' is the most common default.
             if (imageUrls.length > 0 && !inputs.image) {
                 inputs.image = imageUrls[0];
             }
         }
+
+        // Step 2: Fallback — scan all string fields (handles raw, text, query, anything)
+        if (!inputs.prompt) {
+            const SKIP_KEYS = new Set(["messages", "image", "image_url", "video", "audio", "negative_prompt"]);
+            for (const [key, value] of Object.entries(inputs)) {
+                if (!SKIP_KEYS.has(key) && typeof value === "string" && value.trim().length > 0) {
+                    console.warn(`[ReplicateAdapter] No 'prompt' found. Using field "${key}" as prompt.`);
+                    inputs.prompt = value.trim();
+                    break;
+                }
+            }
+        }
+
+        // Step 3: Hard fail if still no prompt
+        if (!inputs.prompt) {
+            throw new Error("No prompt could be derived from inputs. Please provide a prompt attribute on the node.");
+        }
+
+        // Step 4: Use model.prompt_field if defined (e.g. "text" for flux-schnell), else default to "prompt"
+        const promptField = model.prompt_field || "prompt";
+
+        // Step 5: Strip internal/meta fields and build clean Replicate input
+        const { messages, raw, prompt, ...rest } = inputs;
+
+        const replicateInputs = {
+            [promptField]: prompt,  // e.g. { prompt: "..." } or { text: "..." }
+            ...rest
+        };
 
         const url = model.link;
         const headers = {
@@ -52,15 +75,11 @@ const ReplicateAdapter = {
             "Authorization": `Token ${apiToken}`
         };
 
-        // Replicate usually expects inputs to be wrapped in an 'input' object
-        // If 'inputs' is already formatted (like messages), we adapt it
-        const body = {
-            input: Array.isArray(inputs) ? { messages: inputs } : inputs
-        };
+        const body = { input: replicateInputs };
 
         try {
-            console.log("FINAL Replicate Input to Adapter:", JSON.stringify(inputs, null, 2));
-            //console.log("Replicate Request Body (sent to API):", JSON.stringify(body, null, 2));
+            console.log("Replicate Request Body (sent to API):", JSON.stringify(body, null, 2));
+
             const response = await fetch(url, {
                 method: "POST",
                 headers,
@@ -74,11 +93,10 @@ const ReplicateAdapter = {
 
             let result = await response.json();
 
-            // Handle asynchronous predictions (polling)
+            // Step 6: Poll if async prediction
             if (result.urls && result.urls.get) {
                 const pollUrl = result.urls.get;
-                while (result.status !== "succeeded" && result.status !== "failed" && result.status !== "canceled") {
-                    // Wait for the prediction to complete
+                while (!["succeeded", "failed", "canceled"].includes(result.status)) {
                     await new Promise(resolve => setTimeout(resolve, 1500));
                     const pollRes = await fetch(pollUrl, { headers });
                     result = await pollRes.json();
@@ -88,10 +106,11 @@ const ReplicateAdapter = {
                     throw new Error(`Replicate prediction failed: ${result.error || "Unknown error"}`);
                 }
             }
-            // Join the output if it's an array (typical for text models on Replicate)
+
+            // Step 7: Return output
             const output = result?.data?.output ?? result?.output;
-            //console.log(output)
-            return Array.isArray(output) ? output.join('') : output;
+            return Array.isArray(output) ? output.join("") : output;
+
         } catch (error) {
             console.error("Replicate Adapter Generate Error:", error);
             throw error;
