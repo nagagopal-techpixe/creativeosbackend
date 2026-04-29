@@ -37,7 +37,7 @@ export const detectFileType = (file) => {
 
 // ─── File filter ────────────────────────────────────────────────────────────
 
-const fileFilter = (req, file, cb) => {
+export const fileFilter = (req, file, cb) => {
   const type = detectFileType(file)
   if (!type) {
     return cb(
