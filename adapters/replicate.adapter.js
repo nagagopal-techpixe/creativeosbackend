@@ -58,16 +58,14 @@ const ReplicateAdapter = {
             throw new Error("No prompt could be derived from inputs. Please provide a prompt attribute on the node.");
         }
 
-        // Step 4: Use model.prompt_field if defined (e.g. "text" for flux-schnell), else default to "prompt"
+        // Step 5: Build clean Replicate input (pass through all fields except internal 'messages')
+        const { messages, ...replicateInputs } = inputs;
+
+        // If the model uses a custom prompt field (like 'text' or 'input_text'), map it.
         const promptField = model.prompt_field || "prompt";
-
-        // Step 5: Strip internal/meta fields and build clean Replicate input
-        const { messages, raw, prompt, ...rest } = inputs;
-
-        const replicateInputs = {
-            [promptField]: prompt,  // e.g. { prompt: "..." } or { text: "..." }
-            ...rest
-        };
+        if (promptField !== "prompt" && replicateInputs.prompt) {
+            replicateInputs[promptField] = replicateInputs.prompt;
+        }
 
         const url = model.link;
         const headers = {

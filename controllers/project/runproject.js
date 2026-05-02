@@ -82,82 +82,50 @@ export const runnodes = async (req, res) => {
       for (let i = 0; i < inputs.length; i++) {
         const attr = inputs[i];
         if (!attr) continue;
-        if (
-            attr.dtype === "image" ||
-            attr.name === "image_input" ||
-            attr.dtype === "image_url"
-          ) {
-            // image handling — unchanged
-            if (attr.value) {
-              content.push({ type: "image_url", image_url: { url: attr.value } });
-            }
-            if (attr.connectedFrom) {
-              const connections = Array.isArray(attr.connectedFrom)
-                ? attr.connectedFrom
-                : [attr.connectedFrom];
-              for (const conn of connections) {
-                const connectedNodeId = conn.nodeId;
-                if (!connectedNodeId) continue;
-                const connectedNode = getproject_details.canvas_state.nodes.find(
-                  (n) => n.id === connectedNodeId,
-                );
-                let imageUrl = connectedNode?.data?.params?.source;
-                const artifacts = connectedNode?.data?._artifacts;
-                if (!imageUrl && artifacts && artifacts.length > 0) {
-                  const lastArtifact = artifacts[artifacts.length - 1];
-                  imageUrl = lastArtifact.url || lastArtifact.data;
-                }
-                if (imageUrl) {
-                  content.push({ type: "image_url", image_url: { url: imageUrl } });
-                }
-              }
-            }
-          } else if (attr.dtype === "integer") {
-            directInput[attr.name] = parseInt(attr.value);
-          } else if (attr.dtype === "float") {
-            directInput[attr.name] = parseFloat(attr.value);
-          } else if (attr.dtype === "boolean") {
-            directInput[attr.name] = attr.value === "true" || attr.value === true;
-          } else {
-            // ✅ Everything else — string, array, object, json, any unknown dtype/name
-            // Resolve from connected node first
-            let resolvedValue = null;
 
-            if (attr.connectedFrom) {
-              const connections = Array.isArray(attr.connectedFrom)
-                ? attr.connectedFrom
-                : [attr.connectedFrom];
-              for (const conn of connections) {
-                const connectedNodeId = conn.nodeId;
-                if (!connectedNodeId) continue;
-                const connectedNode = getproject_details.canvas_state.nodes.find(
-                  (n) => n.id === connectedNodeId,
-                );
-                const artifacts = connectedNode?.data?._artifacts;
-                if (artifacts && artifacts.length > 0) {
-                  const lastArtifact = artifacts[artifacts.length - 1];
-                  resolvedValue = lastArtifact.url || lastArtifact.data;
-                }
-              }
-            }
-
-            // Fallback to direct value
-            const finalValue = resolvedValue ?? attr.value;
-
-            // If it's prompt/messages → push to content array
-            // Otherwise → put in directInput
-            if (attr.name === "prompt" || attr.name === "messages") {
-              if (finalValue !== undefined && finalValue !== null) {
-                content.push({ type: "text", text: String(finalValue) });
-              }
+        let resolvedValue = null;
+        if (attr.connectedFrom) {
+          const connections = Array.isArray(attr.connectedFrom)
+            ? attr.connectedFrom
+            : [attr.connectedFrom];
+          for (const conn of connections) {
+            const connectedNodeId = conn.nodeId;
+            if (!connectedNodeId) continue;
+            const connectedNode = getproject_details.canvas_state.nodes.find(
+              (n) => n.id === connectedNodeId,
+            );
+            const artifacts = connectedNode?.data?._artifacts;
+            if (artifacts && artifacts.length > 0) {
+              const lastArtifact = artifacts[artifacts.length - 1];
+              resolvedValue = lastArtifact.url || lastArtifact.data;
             } else {
-              // ✅ Any other name with any other dtype goes straight into directInput
-              if (finalValue !== undefined && finalValue !== null) {
-                directInput[attr.name] = finalValue;
-              }
+              resolvedValue = connectedNode?.data?.params?.source || connectedNode?.data?.value;
             }
           }
-        
+        }
+
+        const finalValue = resolvedValue ?? attr.value;
+        if (finalValue === undefined || finalValue === null) continue;
+
+        // 1. Add to multimodal content array (for broad compatibility)
+        if (attr.dtype === "image" || attr.dtype === "image_url" || attr.name === "image_input") {
+          content.push({ type: "image_url", image_url: { url: String(finalValue) } });
+        } else if (attr.name === "prompt" || attr.name === "messages" || attr.dtype === "string") {
+          content.push({ type: "text", text: String(finalValue) });
+        }
+
+        // 2. Add to directInput (preserve the EXACT attribute name for models that need it)
+        if (attr.name !== "messages") {
+          if (attr.dtype === "integer") {
+            directInput[attr.name] = parseInt(finalValue);
+          } else if (attr.dtype === "float") {
+            directInput[attr.name] = parseFloat(finalValue);
+          } else if (attr.dtype === "boolean") {
+            directInput[attr.name] = finalValue === "true" || finalValue === true;
+          } else {
+            directInput[attr.name] = finalValue;
+          }
+        }
       }
 
       //console.log(content)
@@ -273,76 +241,47 @@ export const runnodes = async (req, res) => {
           const attr = inputs[j];
           if (!attr) continue;
 
-          if (
-            attr.dtype === "image" ||
-            attr.name === "image_input" ||
-            attr.dtype === "image_url"
-          ) {
-            if (attr.value) {
-              content.push({ type: "image_url", image_url: { url: attr.value } });
-            }
-            if (attr.connectedFrom) {
-              const connections = Array.isArray(attr.connectedFrom)
-                ? attr.connectedFrom
-                : [attr.connectedFrom];
-              for (const conn of connections) {
-                const connectedNodeId = conn.nodeId;
-                if (!connectedNodeId) continue;
-                const connectedNode = project_details.canvas_state.nodes.find(
-                  (n) => n.id === connectedNodeId,
-                );
-                let image_url = connectedNode?.data?.params?.source;
-                const artifacts = connectedNode?.data?._artifacts;
-                if (!image_url && artifacts && artifacts.length > 0) {
-                  const lastArtifact = artifacts[artifacts.length - 1];
-                  image_url = lastArtifact.url || lastArtifact.data;
-                }
-                if (image_url) {
-                  content.push({
-                    type: "image_url",
-                    image_url: { url: image_url },
-                  });
-                }
+          let resolvedValue = null;
+          if (attr.connectedFrom) {
+            const connections = Array.isArray(attr.connectedFrom)
+              ? attr.connectedFrom
+              : [attr.connectedFrom];
+            for (const conn of connections) {
+              const connectedNodeId = conn.nodeId;
+              if (!connectedNodeId) continue;
+              const connectedNode = project_details.canvas_state.nodes.find(
+                (n) => n.id === connectedNodeId,
+              );
+              const artifacts = connectedNode?.data?._artifacts;
+              if (artifacts && artifacts.length > 0) {
+                const lastArtifact = artifacts[artifacts.length - 1];
+                resolvedValue = lastArtifact.url || lastArtifact.data;
+              } else {
+                resolvedValue = connectedNode?.data?.params?.source || connectedNode?.data?.value;
               }
             }
-          } else if (attr.dtype === "integer") {
-            directInput[attr.name] = parseInt(attr.value);
-          } else if (attr.dtype === "float") {
-            directInput[attr.name] = parseFloat(attr.value);
-          } else if (attr.dtype === "boolean") {
-            directInput[attr.name] =
-              attr.value === "true" || attr.value === true;
-          } else {
-            // ✅ Everything else — string, array, object, json, any unknown dtype/name
-            let resolvedValue = null;
-            if (attr.connectedFrom) {
-              const connections = Array.isArray(attr.connectedFrom)
-                ? attr.connectedFrom
-                : [attr.connectedFrom];
-              for (const conn of connections) {
-                const connectedNodeId = conn.nodeId;
-                if (!connectedNodeId) continue;
-                const connectedNode = project_details.canvas_state.nodes.find(
-                  (n) => n.id === connectedNodeId,
-                );
-                const artifacts = connectedNode?.data?._artifacts;
-                if (artifacts && artifacts.length > 0) {
-                  const lastArtifact = artifacts[artifacts.length - 1];
-                  resolvedValue = lastArtifact.url || lastArtifact.data;
-                }
-              }
-            }
+          }
 
-            const finalValue = resolvedValue ?? attr.value;
+          const finalValue = resolvedValue ?? attr.value;
+          if (finalValue === undefined || finalValue === null) continue;
 
-            if (attr.name === "prompt" || attr.name === "messages") {
-              if (finalValue !== undefined && finalValue !== null) {
-                content.push({ type: "text", text: String(finalValue) });
-              }
+          // 1. Multimodal
+          if (attr.dtype === "image" || attr.dtype === "image_url" || attr.name === "image_input") {
+            content.push({ type: "image_url", image_url: { url: String(finalValue) } });
+          } else if (attr.name === "prompt" || attr.name === "messages" || attr.dtype === "string") {
+            content.push({ type: "text", text: String(finalValue) });
+          }
+
+          // 2. Direct
+          if (attr.name !== "messages") {
+            if (attr.dtype === "integer") {
+              directInput[attr.name] = parseInt(finalValue);
+            } else if (attr.dtype === "float") {
+              directInput[attr.name] = parseFloat(finalValue);
+            } else if (attr.dtype === "boolean") {
+              directInput[attr.name] = finalValue === "true" || finalValue === true;
             } else {
-              if (finalValue !== undefined && finalValue !== null) {
-                directInput[attr.name] = finalValue;
-              }
+              directInput[attr.name] = finalValue;
             }
           }
         }

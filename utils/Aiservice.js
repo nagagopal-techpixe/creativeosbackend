@@ -30,7 +30,7 @@ export const sendToAI = async (generation) => {
     },
     {
       headers: {
-        Authorization:  `Bearer ${REPLICATE_API_TOKEN}`,
+        Authorization:  `Token ${REPLICATE_API_TOKEN}`,
         "Content-Type": "application/json",
         Prefer:         "wait",               // wait for result inline (no polling)
       },
