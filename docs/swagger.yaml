@@ -1542,3 +1542,99 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/admin/image/genrate-image:
+    post:
+      summary: Generate an image using AI (Stable Diffusion)
+      tags: [Image Builder]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                  example: "A stunning product photography of a smartphone in a neon showroom"
+                modelid:
+                    type: string 
+                    example: "Model id"
+      responses:
+        '200':
+          description: Image generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  statuscode:
+                    type: integer
+                  message:
+                    type: string
+                  raw:
+                    type: string
+                    description: URL of the generated image
+        '400':
+          description: Prompt is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/image/genrate-character:
+    post:
+      summary: Generate an character using AI (Stable Diffusion)
+      tags: [Character Builder]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                  example: "A stunning product photography of a smartphone in a neon showroom"
+                modelid:
+                    type: string 
+                    example: "Model id"
+      responses:
+        '200':
+          description: Character generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  statuscode:
+                    type: integer
+                  message:
+                    type: string
+                  raw:
+                    type: string
+                    description: URL of the generated image
+        '400':
+          description: Prompt is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
