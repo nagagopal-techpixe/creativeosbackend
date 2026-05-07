@@ -1,7 +1,7 @@
 // middleware/authMiddleware.js
-import jwt   from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import Admin from "../models/AdminModel/Admin.js";
-import User  from "../models/Usermodel/User.js";
+import User from "../models/Usermodel/User.js";
 
 
 // ─── Protect Admin routes ─────────────────────────────────────────────────────
@@ -11,8 +11,8 @@ export const protectAdmin = async (req, res, next) => {
     return res.status(401).json({ message: "Not authorized, no token" });
 
   try {
-    const token      = authHeader.split(" ")[1];
-    const decoded    = jwt.verify(token, process.env.JWT_SECRET);
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     if (decoded.role !== "admin")
       return res.status(403).json({ message: "Not an admin token" });
@@ -31,7 +31,7 @@ export const protectUser = async (req, res, next) => {
     return res.status(401).json({ message: "Not authorized, no token" });
 
   try {
-    const token   = authHeader.split(" ")[1];
+    const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     if (decoded.role !== "user")

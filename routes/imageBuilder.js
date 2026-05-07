@@ -43,8 +43,15 @@ import {
 
 } from "../controllers/images/imageBuilder.js";
 
-import { protectAdmin } from "../middleware/authMiddleware.js";
+import { protectAdmin, protectUser } from "../middleware/authMiddleware.js";
+
+import { genrate_image } from "../controllers/images/genrateimage.js"
+import { genrate_character_image } from "../controllers/character/genratecharacter.js";
 const router = express.Router();
+
+router.post("/genrate-image", protectUser, genrate_image);
+router.post("/genrate-character", protectUser, genrate_character_image);
+
 router.use(protectAdmin);
 
 //
@@ -118,5 +125,6 @@ router.patch("/details/group/:groupId/opt/:optId/toggle", toggleDetailOpt);
 //
 router.get("/presets", getPresets);
 router.patch("/presets/toggle", togglePresetSection);
+
 
 export default router;
