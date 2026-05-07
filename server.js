@@ -20,6 +20,7 @@ import runRoutes from "./routes/runRoutes.js";
 import loaderRoutes from "./routes/LoaderRoutes.js";
 import projectsRoutes from "./routes/Projectrouter.js";
 import generationRoutes from "./routes/Generationroutes.js"
+import activeModelRoutes from "./routes/activeModelRoutes.js";
 dotenv.config();
 connectDB();
 
@@ -47,6 +48,7 @@ app.use("/api/admin/run", runRoutes);
 app.use("/api/admin/loader", loaderRoutes);
 app.use("/api/admin/projects", projectsRoutes);
 app.use("/api/user/generations", generationRoutes);
+app.use("/api/admin/activemodel", activeModelRoutes);
 
 
 const swaggerDocument = YAML.load("./docs/swagger.yaml");

@@ -1,7 +1,7 @@
 import path from "path";
 import multer from "multer";
 
-// ─── Allowed types ──────────────────────────────────────────────────────────
+// ─── Allowed types ──────────────────
 
 const ALLOWED = {
   image: {
@@ -21,7 +21,7 @@ const ALLOWED = {
   },
 }
 
-// ─── Detect type from file ──────────────────────────────────────────────────
+// ─── Detect type from file ──────────
 
 export const detectFileType = (file) => {
   const ext  = path.extname(file.originalname).toLowerCase()
@@ -35,7 +35,7 @@ export const detectFileType = (file) => {
   return null
 }
 
-// ─── File filter ────────────────────────────────────────────────────────────
+// ─── File filter ────────────────────
 
 export const fileFilter = (req, file, cb) => {
   const type = detectFileType(file)
@@ -59,7 +59,7 @@ export const loaderUpload = multer({
   limits: { fileSize: 200 * 1024 * 1024 }, // 200MB hard cap (video is largest)
 }).single("file")
 
-// ─── Dynamic upload for model runner ────────────────────────────────────────
+// ─── Dynamic upload for model runner 
 
 export const handleImageUpload = (req, res, next) => {
   const attributes = req.model?.model_attributes ?? []
@@ -85,7 +85,7 @@ export const handleImageUpload = (req, res, next) => {
   })
 }
 
-// ─── Multer error messages ───────────────────────────────────────────────────
+// ─── Multer error messages ───────────
 
 const multerErrorMessage = (err) => {
   switch (err.code) {

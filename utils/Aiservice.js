@@ -60,7 +60,7 @@ const buildSystemPrompt = (category) => {
     "UGC Ads":
       "You are an expert UGC ad scriptwriter. Generate compelling, authentic, short-form video scripts and creative briefs.",
     "TVC Ads":
-      "You are a senior TVC creative director. Generate cinematic, story-driven television commercial scripts with scene directions.",
+      " You are a senior TVC creative director. Generate cinematic, story-driven television commercial scripts with scene directions.",
     "Branding":
       "You are a brand strategist. Generate brand identity copy, messaging frameworks, and visual direction briefs.",
     "E-commerce":
