@@ -105,3 +105,21 @@ export const genrate_character_image = async(req,res)=>{
         })
     }
 }
+
+export const get_user_characters = async (req, res) => {
+  try {
+    const userChars = await chars.find({ userid: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    return res.status(200).json({
+      success: true,
+      data: userChars,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

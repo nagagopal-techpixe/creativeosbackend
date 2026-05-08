@@ -105,3 +105,24 @@ export const genrate_image = async(req,res)=>{
         })
     }
 }
+
+export const get_user_images = async (req, res) => {
+  try {
+    const userImages = await images.find({ userid: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    return res.status(200).json({
+      success: true,
+      statuscode: 200,
+      data: userImages,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      statuscode: 500,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};

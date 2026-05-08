@@ -45,12 +45,14 @@ import {
 
 import { protectAdmin, protectUser } from "../middleware/authMiddleware.js";
 
-import { genrate_image } from "../controllers/images/genrateimage.js"
-import { genrate_character_image } from "../controllers/character/genratecharacter.js";
+import { genrate_image ,get_user_images} from "../controllers/images/genrateimage.js"
+import { genrate_character_image,get_user_characters } from "../controllers/character/genratecharacter.js";
 const router = express.Router();
 
 router.post("/genrate-image", protectUser, genrate_image);
-router.post("/genrate-character", protectUser, genrate_character_image);
+router.get("/my-images", protectUser, get_user_images);
+router.post("/generate-character", protectUser, genrate_character_image);
+router.get("/my-characters", protectUser, get_user_characters);
 
 router.use(protectAdmin);
 
