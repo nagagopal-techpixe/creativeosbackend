@@ -36,8 +36,15 @@ const ReplicateAdapter = {
                 inputs.prompt = promptParts.join("\n\n");
             }
 
-            if (imageUrls.length > 0 && !inputs.image) {
-                inputs.image = imageUrls[0];
+            if (imageUrls.length > 0) {
+                // Automatically populate common image field names if they aren't already provided
+                const commonImageFields = ["image", "images", "image_input", "input_image", "init_image"];
+                commonImageFields.forEach(field => {
+                    if (!inputs[field]) {
+                        // If multiple images are found, default to the array, otherwise the first image
+                        inputs[field] = imageUrls.length > 1 ? imageUrls : imageUrls[0];
+                    }
+                });
             }
         }
 
@@ -61,6 +68,15 @@ const ReplicateAdapter = {
         // Step 5: Build clean Replicate input (pass through all fields except internal 'messages')
         const { messages, ...replicateInputs } = inputs;
 
+        // Ensure fields that are often expected as arrays are wrapped if they come in as strings
+        // This list can be extended per-model in the database using a 'array_fields' property
+        const arrayFields = model.array_fields || ["image_input", "images", "input_image", "init_image", "masks", "control_images"];
+        for (const field of arrayFields) {
+            if (replicateInputs[field] && typeof replicateInputs[field] === "string") {
+                replicateInputs[field] = [replicateInputs[field]];
+            }
+        }
+
         // If the model uses a custom prompt field (like 'text' or 'input_text'), map it.
         const promptField = model.prompt_field || "prompt";
         if (promptField !== "prompt" && replicateInputs.prompt) {
@@ -76,7 +92,7 @@ const ReplicateAdapter = {
         const body = { input: replicateInputs };
 
         try {
-            console.log("Replicate Request Body (sent to API):", JSON.stringify(body, null, 2));
+            console.log(`Replicate Request [${url}]:`, JSON.stringify(body, null, 2));
 
             const response = await fetch(url, {
                 method: "POST",
